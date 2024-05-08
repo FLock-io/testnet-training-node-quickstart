@@ -6,7 +6,7 @@ from loguru import logger
 from torch.utils.data import Dataset
 
 
-class UnifiedSFTDataset(Dataset):
+class GemmaSFTDataset(Dataset):
     def __init__(self, file, tokenizer, max_seq_length):
         self.tokenizer = tokenizer
         self.system_format = "<bos>"

@@ -6,7 +6,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
                           BitsAndBytesConfig, TrainingArguments)
 from trl import SFTTrainer
 
-from dataset import SFTDataCollator, UnifiedSFTDataset
+from dataset import SFTDataCollator, GemmaSFTDataset
 from merge import merge_lora_to_base_model
 
 lora_config = LoraConfig(
@@ -54,7 +54,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # Load dataset
-dataset = UnifiedSFTDataset(
+dataset = GemmaSFTDataset(
     file="demo_data.jsonl",
     tokenizer=tokenizer,
     max_seq_length=512,
