@@ -8,7 +8,6 @@ from trl import SFTTrainer
 
 from dataset import SFTDataCollator, UnifiedSFTDataset
 from merge import merge_lora_to_base_model
-from utils import load_model, load_tokenizer
 
 lora_config = LoraConfig(
     r=8,
