@@ -26,7 +26,9 @@ pip install -r requirements.txt
 Execute the following command to start the training:
 
 ```bash
-python demo.py
+HF_TOKEN="hf_yourhftoken" CUDA_VISIBLE_DEVICES=0 python demo.py
 ```
+
+The HF token is required due to the Gemma License.
 
 This command initiates fine-tuning on the demo dataset, saves the fine-tuned model, merges the adapter to the base model, and saves the final model.
