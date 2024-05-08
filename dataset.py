@@ -85,14 +85,13 @@ class SFTDataCollator(object):
         self.pad_token_id = tokenizer.pad_token_id
 
     def __call__(self, batch: List[Dict[str, Any]]) -> Dict[str, Any]:
-        # 找出batch中的最大长度
+        # Find the maximum length in the batch
         lengths = [len(x["input_ids"]) for x in batch if x["input_ids"] is not None]
-        # 取出batch中的最大长度，如果超过max_seq_length，则取max_seq_length
+        # Take the maximum length in the batch, if it exceeds max_seq_length, take max_seq_length
         batch_max_len = min(max(lengths), self.max_seq_length)
-        # batch_max_len = self.max_seq_length
 
         input_ids_batch, attention_mask_batch, target_mask_batch = [], [], []
-        # truncate and padding
+        # Truncate and pad
         for x in batch:
             input_ids = x["input_ids"]
             attention_mask = x["attention_mask"]
@@ -101,11 +100,11 @@ class SFTDataCollator(object):
                 logger.info("some input_ids is None")
                 continue
             padding_len = batch_max_len - len(input_ids)
-            # padding
+            # Pad
             input_ids = input_ids + [self.pad_token_id] * padding_len
             attention_mask = attention_mask + [0] * padding_len
             target_mask = target_mask + [0] * padding_len
-            # truncate
+            # Truncate
             input_ids = input_ids[: self.max_seq_length]
             attention_mask = attention_mask[: self.max_seq_length]
             target_mask = target_mask[: self.max_seq_length]
@@ -114,7 +113,7 @@ class SFTDataCollator(object):
             attention_mask_batch.append(attention_mask)
             target_mask_batch.append(target_mask)
 
-        # 将list转换为tensor，得到最终的的模型输入
+        # Convert lists to tensors to get the final model input
         input_ids_batch = torch.tensor(input_ids_batch, dtype=torch.long)
         attention_mask_batch = torch.tensor(attention_mask_batch, dtype=torch.long)
         target_mask_batch = torch.tensor(target_mask_batch, dtype=torch.long)

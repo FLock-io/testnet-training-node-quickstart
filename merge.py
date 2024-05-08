@@ -24,7 +24,3 @@ def merge_lora_to_base_model(
 
     tokenizer.save_pretrained(save_path)
     model.save_pretrained(save_path)
-
-
-if __name__ == "__main__":
-    merge_lora_to_base_model()
