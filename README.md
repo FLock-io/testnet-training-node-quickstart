@@ -61,5 +61,5 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
 Simply run
 
 ```bash
-TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HG_USERNAME="your-hg-user-name" python full_automtion.py
+TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HG_USERNAME="your-hg-user-name" python full_automation.py
 ```
