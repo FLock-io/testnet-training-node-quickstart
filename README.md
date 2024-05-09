@@ -20,8 +20,11 @@ pip install -r requirements.txt
 - [`demo_data.jsonl`](demo_data.jsonl) - Follows the shareGPT format. The training data you receive from the `fed-ledger` is in exactly the same format.
 - [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please ensure you merge the adapter before uploading to your Hugging Face repository.
 - [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for a Gemma-2B model.
+- [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
 
-### Start the Training
+### Play with demo.py
+
+#### Start the Training
 
 Execute the following command to start the training:
 
@@ -33,11 +36,11 @@ The HF token is required due to the Gemma License.
 
 This command initiates fine-tuning on the demo dataset, saves the fine-tuned model, merges the adapter to the base model, and saves the final model.
 
-### Upload the model folder to your HuggingFace repo
+#### Upload the model folder to your HuggingFace repo
 
 [HuggingFace Models Uploading](https://huggingface.co/docs/hub/en/models-uploading)
 
-### Submit the model
+#### Submit the model
 
 ```bash
 
@@ -51,4 +54,12 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
         "base_model": "gemma"
     }
 }'
+```
+
+### Full Automation
+
+Simply run
+
+```bash
+TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 python full_automtion.py
 ```
