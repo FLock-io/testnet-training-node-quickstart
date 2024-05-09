@@ -49,7 +49,7 @@ if __name__ == "__main__":
             f.write(chunk)
     # train and merge
     print("Start to train the model...")
-    train_and_merge(num_train_epochs=1, context_length=256)
+    train_and_merge(context_length=context_length)
 
     # generate a random repo id based on timestamp
     hg_repo_id = "gemma-2b-flock-" + str(int(time.time()))
