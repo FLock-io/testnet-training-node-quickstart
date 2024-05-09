@@ -10,6 +10,7 @@ from demo import train_and_merge
 
 FLOCK_API_KEY = os.environ["FLOCK_API_KEY"]
 FED_LEDGER_BASE_URL = "https://fed-ledger-prod.flock.io/api/v1"
+HG_USERNAME = os.environ["HG_USERNAME"]
 
 
 def get_task(task_id: int):
@@ -76,5 +77,5 @@ if __name__ == "__main__":
         repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
     )
     # submit
-    submit_task(task_id, hg_repo_id)
+    submit_task(task_id, f"{HG_USERNAME}/hg_repo_id")
     print("Task submitted successfully")
