@@ -34,12 +34,16 @@ def submit_task(task_id: int, hg_repo_id: str):
         headers=headers,
         data=payload,
     )
+    if response.status_code != 200:
+        raise Exception(f"Failed to submit task: {response.text}")
     return response.json()
 
 
 if __name__ == "__main__":
     task_id = os.environ["TASK_ID"]
     task = get_task(task_id)
+    # log the task info
+    print(json.dumps(task, indent=4))
     # download data from a presigned url
     data_url = task["data"]["training_set_url"]
     context_length = task["data"]["context_length"]
