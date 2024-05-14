@@ -81,5 +81,5 @@ if __name__ == "__main__":
         repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
     )
     # submit
-    submit_task(task_id, f"{HG_USERNAME}/hg_repo_id")
+    submit_task(task_id, f"{HG_USERNAME}/{hg_repo_id}")
     print("Task submitted successfully")
