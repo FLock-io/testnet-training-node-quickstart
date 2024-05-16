@@ -40,6 +40,15 @@ This command initiates fine-tuning on the demo dataset, saves the fine-tuned mod
 
 [HuggingFace Models Uploading](https://huggingface.co/docs/hub/en/models-uploading)
 
+
+#### Getting the task id
+
+Before you submit the model script for a task, you will first need to stake on the task as a node.
+
+- Go to the [FLock Training Platform](https://train.flock.io/stake)
+- Select **Training Node** tab and stake on the task you want to submit the model to.
+- The task ID is the ID of the task you want to submit the model to.
+
 #### Submit the model
 
 ```bash
