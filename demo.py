@@ -20,12 +20,8 @@ def train_and_merge(
         r=8,
         target_modules=[
             "q_proj",
-            "o_proj",
             "k_proj",
             "v_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
         ],
         task_type="CAUSAL_LM",
     )
