@@ -24,10 +24,10 @@ class TrainNode:
     def __init__(self, task_id: int = 2,
                  training_args: dict = None,
                  HF_TOKEN: str = None,
-                 HG_USERNAME: str = None,
+                 HF_USERNAME: str = None,
                  FLOCK_API_KEY: str = None):
         self.HF_TOKEN = check_env_var("HF_TOKEN", HF_TOKEN)
-        self.HG_USERNAME = check_env_var("HG_USERNAME", HG_USERNAME)
+        self.HF_USERNAME = check_env_var("HF_USERNAME", HF_USERNAME)
         self.FLOCK_API_KEY = check_env_var("FLOCK_API_KEY", FLOCK_API_KEY)
         self.task_id = task_id
         data = self.get_task_data()
@@ -79,21 +79,21 @@ class TrainNode:
         )
         return model, tokenizer
 
-    def push(self, model=None, tokenizer=None, hg_repo_id: str = None):
-        hg_repo_id = "gemma-2b-flock-" + str(int(time.time())) if hg_repo_id is None else hg_repo_id
+    def push(self, model=None, tokenizer=None, hf_repo_id: str = None):
+        hf_repo_id = "gemma-2b-flock-" + str(int(time.time())) if hf_repo_id is None else hf_repo_id
         # Load model
         if model is None or tokenizer is None:
             model, tokenizer = self.load_merged_model()
         tokenizer.push_to_hub(
-            repo_id=hg_repo_id, use_temp_dir=True, token=self.HF_TOKEN
+            repo_id=hf_repo_id, use_temp_dir=True, token=self.HF_TOKEN
         )
         logger.info("SUCCESSFULLY PUSHED TOKENIZER TO HUB")
         logger.info("Start to push the model to the hub...")
         model.push_to_hub(
-            repo_id=hg_repo_id, use_temp_dir=True, token=self.HF_TOKEN
+            repo_id=hf_repo_id, use_temp_dir=True, token=self.HF_TOKEN
         )
         logger.info("SUCCESSFULLY PUSHED MODEL TO HUB")
-        self.submit_task(f"{self.HG_USERNAME}/{hg_repo_id}")
+        self.submit_task(f"{self.HF_USERNAME}/{hf_repo_id}")
 
     def submit_task(self, hg_repo_id: str):
         payload = json.dumps(

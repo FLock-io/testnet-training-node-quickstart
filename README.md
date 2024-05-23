@@ -74,9 +74,20 @@ We also have python interface for the train node.
 from node import TrainNode
 
 TASK_ID = "<task-id>"
+
+# If you have already setup the environment variables, you can skip the following lines.
 FLOCK_API_KEY = "<your-flock-api-key-stakes-as-node-for-the-task>"
 HF_TOKEN = "<your-hf-token>"
 HF_USERNAME = "your-hg-user-name"
-node = TrainNode(TASK_ID, FLOCK_API_KEY=FLOCK_API_KEY, HF_TOKEN=HF_TOKEN, 
-                 HG_USERNAME=HF_USERNAME)
+# Define the TrainNode.
+node = TrainNode(TASK_ID, FLOCK_API_KEY=FLOCK_API_KEY, HF_TOKEN=HF_TOKEN,
+                 HF_USERNAME=HF_USERNAME)
+# Train
+node.train()
+# Push the model.
+node.push()
+# You can also load your local model and push directly.
+model = 'LOADED_MODEL'
+tokenizer = 'LOADED_TOKENIZER'
+node.push(model, tokenizer)
 ```
