@@ -63,3 +63,5 @@ Simply run
 ```bash
 TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HF_USERNAME="your-hf-user-name" python full_automation.py
 ```
+
+The above command will automatically train and submit multiple LLMs that are smaller the max parameters limitation for the given task.
