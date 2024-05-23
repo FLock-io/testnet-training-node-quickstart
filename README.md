@@ -17,10 +17,14 @@ pip install -r requirements.txt
 ### File Structure
 
 - [`dataset.py`](dataset.py) - Contains the logic to process the raw data from `demo_data.jsonl`.
-- [`demo_data.jsonl`](demo_data.jsonl) - Follows the shareGPT format. The training data you receive from the `fed-ledger` is in exactly the same format.
-- [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please ensure you merge the adapter before uploading to your Hugging Face repository.
+- [`demo_data.jsonl`](demo_data.jsonl) - Follows the shareGPT format. The training data you receive from
+  the `fed-ledger` is in exactly the same format.
+- [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please
+  ensure you merge the adapter before uploading to your Hugging Face repository.
 - [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for a Gemma-2B model.
-- [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
+- [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the
+  training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit
+  the task to fed-ledger.
 
 ### Play with demo.py
 
@@ -34,7 +38,8 @@ HF_TOKEN="hf_yourhftoken" CUDA_VISIBLE_DEVICES=0 python demo.py
 
 The HF token is required due to the Gemma License.
 
-This command initiates fine-tuning on the demo dataset, saves the fine-tuned model, merges the adapter to the base model, and saves the final model.
+This command initiates fine-tuning on the demo dataset, saves the fine-tuned model, merges the adapter to the base
+model, and saves the final model.
 
 #### Upload the model folder to your HuggingFace repo
 
@@ -61,5 +66,17 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
 Simply run
 
 ```bash
-TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HG_USERNAME="your-hg-user-name" python full_automation.py
+TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HF_USERNAME="your-hg-user-name" python full_automation.py
+```
+
+We also have python interface for the train node.
+```python
+from node import TrainNode
+
+TASK_ID = "<task-id>"
+FLOCK_API_KEY = "<your-flock-api-key-stakes-as-node-for-the-task>"
+HF_TOKEN = "<your-hf-token>"
+HF_USERNAME = "your-hg-user-name"
+node = TrainNode(TASK_ID, FLOCK_API_KEY=FLOCK_API_KEY, HF_TOKEN=HF_TOKEN, 
+                 HG_USERNAME=HF_USERNAME)
 ```

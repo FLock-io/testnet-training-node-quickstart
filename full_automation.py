@@ -10,7 +10,7 @@ from demo import train_and_merge
 
 FLOCK_API_KEY = os.environ["FLOCK_API_KEY"]
 FED_LEDGER_BASE_URL = "https://fed-ledger-prod.flock.io/api/v1"
-HG_USERNAME = os.environ["HG_USERNAME"]
+HF_USERNAME = os.environ["HF_USERNAME"]
 
 
 def get_task(task_id: int):
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     train_and_merge(context_length=context_length)
 
     # generate a random repo id based on timestamp
-    hg_repo_id = "gemma-2b-flock-" + str(int(time.time()))
+    hf_repo_id = "gemma-2b-flock-" + str(int(time.time()))
 
     # load the merged model
     model = AutoModelForCausalLM.from_pretrained(
@@ -71,15 +71,15 @@ if __name__ == "__main__":
     # upload
     print("Start to push the model to the hub...")
     model.push_to_hub(
-        repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+        repo_id=hf_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
     )
     # upload tokenizer as well
     tokenizer = AutoTokenizer.from_pretrained(
         "merged_model",
     )
     tokenizer.push_to_hub(
-        repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+        repo_id=hf_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
     )
     # submit
-    submit_task(task_id, f"{HG_USERNAME}/{hg_repo_id}")
+    submit_task(task_id, f"{HF_USERNAME}/{hf_repo_id}")
     print("Task submitted successfully")
