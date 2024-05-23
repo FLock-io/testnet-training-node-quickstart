@@ -66,19 +66,24 @@ class TrainNode:
         logger.info("Start to train the model...")
         train_and_merge(context_length=self.content_length, **self.training_args)
 
-    def push(self, hg_repo_id: str = None):
-        hg_repo_id = "gemma-2b-flock-" + str(int(time.time())) if hg_repo_id is None else hg_repo_id
-        # Load model
+    def load_merged_model(self, model_path='merged_model'):
         model = AutoModelForCausalLM.from_pretrained(
-            "merged_model",
+            model_path,
             trust_remote_code=True,
             low_cpu_mem_usage=True,
             torch_dtype=torch.float16,
             device_map='cuda',
         )
         tokenizer = AutoTokenizer.from_pretrained(
-            "merged_model",
+            model_path
         )
+        return model, tokenizer
+
+    def push(self, model=None, tokenizer=None, hg_repo_id: str = None):
+        hg_repo_id = "gemma-2b-flock-" + str(int(time.time())) if hg_repo_id is None else hg_repo_id
+        # Load model
+        if model is None or tokenizer is None:
+            model, tokenizer = self.load_merged_model()
         tokenizer.push_to_hub(
             repo_id=hg_repo_id, use_temp_dir=True, token=self.HF_TOKEN
         )
