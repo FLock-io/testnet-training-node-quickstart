@@ -11,11 +11,11 @@ from demo import train_and_merge
 
 
 def check_env_var(VAR_NAME, PASSED_VAR):
-    if os.environ["VAR_NAME"] is None and PASSED_VAR is None:
+    if os.environ.get(VAR_NAME) is None and PASSED_VAR is None:
         raise Exception(f"{VAR_NAME} not found in environment variables. "
                         f"You should assign your Hugging Face token to the {VAR_NAME} variable. "
                         f"Or your can directly pass the {VAR_NAME} to TrainNode directly.")
-    return os.environ["VAR_NAME"] if PASSED_VAR is None else PASSED_VAR
+    return os.environ[VAR_NAME] if PASSED_VAR is None else PASSED_VAR
 
 
 class TrainNode:
@@ -37,7 +37,6 @@ class TrainNode:
             "num_train_epochs": 3,
             "per_device_train_batch_size": 1,
             "gradient_accumulation_steps": 12,
-            "context_length": self.content_length,
         } if training_args is None else training_args
 
     def get_task_data(self):
