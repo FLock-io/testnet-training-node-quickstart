@@ -16,7 +16,10 @@ def get_task(task_id: int):
 
 def submit_task(task_id: int, hg_repo_id: str, base_model: str):
     payload = json.dumps(
-        {"task_id": task_id, "data": {"hg_repo_id": hg_repo_id, "base_model": base_model}}
+        {
+            "task_id": task_id,
+            "data": {"hg_repo_id": hg_repo_id, "base_model": base_model},
+        }
     )
     headers = {
         "flock-api-key": FLOCK_API_KEY,

@@ -1,14 +1,14 @@
 import json
 import os
 import time
-from loguru import logger
 
 import requests
 import torch
+from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from demo import train_and_merge
-from utils.constants import model2size, model2base_model
+from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
 
 HF_USERNAME = os.environ["HF_USERNAME"]
@@ -69,7 +69,9 @@ if __name__ == "__main__":
                 repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
             )
             # submit
-            submit_task(task_id, f"{HF_USERNAME}/{hg_repo_id}", model2base_model[model_id])
+            submit_task(
+                task_id, f"{HF_USERNAME}/{hg_repo_id}", model2base_model[model_id]
+            )
             logger.info("Task submitted successfully")
         except Exception as e:
             logger.error(f"Error: {e}")
