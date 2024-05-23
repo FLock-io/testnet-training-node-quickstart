@@ -84,6 +84,9 @@ node = TrainNode(TASK_ID, FLOCK_API_KEY=FLOCK_API_KEY, HF_TOKEN=HF_TOKEN,
                  HF_USERNAME=HF_USERNAME)
 # Train
 node.train()
+# You can also add customized training args.
+node.train({'num_train_epochs':3})
+
 # Push the model.
 node.push()
 # You can also load your local model and push directly.

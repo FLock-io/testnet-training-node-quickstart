@@ -56,11 +56,6 @@ class TrainNode:
                     f.write(chunk)
 
     def train(self, training_args: dict = None, ):
-        training_args = {
-            "num_train_epochs": 3,
-            "per_device_train_batch_size": 1,
-            "gradient_accumulation_steps": 12,
-        } if training_args is None else training_args
         logger.info("Start to train the model...")
         train_and_merge(context_length=self.content_length, **training_args)
 
