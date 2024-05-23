@@ -1,43 +1,17 @@
 import json
 import os
 import time
+from loguru import logger
 
 import requests
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from demo import train_and_merge
+from utils.constants import model2size, model2base_model
+from utils.flock_api import get_task, submit_task
 
-FLOCK_API_KEY = os.environ["FLOCK_API_KEY"]
-FED_LEDGER_BASE_URL = "https://fed-ledger-prod.flock.io/api/v1"
-HG_USERNAME = os.environ["HG_USERNAME"]
-
-
-def get_task(task_id: int):
-    response = requests.request(
-        "GET", f"{FED_LEDGER_BASE_URL}/tasks/get?task_id={task_id}"
-    )
-    return response.json()
-
-
-def submit_task(task_id: int, hg_repo_id: str):
-    payload = json.dumps(
-        {"task_id": task_id, "data": {"hg_repo_id": hg_repo_id, "base_model": "gemma"}}
-    )
-    headers = {
-        "flock-api-key": FLOCK_API_KEY,
-        "Content-Type": "application/json",
-    }
-    response = requests.request(
-        "POST",
-        f"{FED_LEDGER_BASE_URL}/tasks/submit-result",
-        headers=headers,
-        data=payload,
-    )
-    if response.status_code != 200:
-        raise Exception(f"Failed to submit task: {response.text}")
-    return response.json()
-
+HF_USERNAME = os.environ["HF_USERNAME"]
 
 if __name__ == "__main__":
     task_id = os.environ["TASK_ID"]
@@ -47,39 +21,60 @@ if __name__ == "__main__":
     # download data from a presigned url
     data_url = task["data"]["training_set_url"]
     context_length = task["data"]["context_length"]
+    max_params = task["data"]["max_params"]
+
+    # filter out the model within the max_params
+    model2size = {k: v for k, v in model2size.items() if v <= max_params}
+    logger.info(f"Models within the max_params: {model2size.keys()}")
     # download in chunks
     response = requests.get(data_url, stream=True)
     with open("demo_data.jsonl", "wb") as f:
-        for chunk in response.iter_content(chunk_size=128):
+        for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
-    # train and merge
-    print("Start to train the model...")
-    train_and_merge(context_length=context_length)
 
-    # generate a random repo id based on timestamp
-    hg_repo_id = "gemma-2b-flock-" + str(int(time.time()))
+    # train all feasible models and merge
+    for model_id in model2size.keys():
+        logger.info(f"Start to train the model {model_id}...")
+        # if OOM, proceed to the next model
+        try:
+            train_and_merge(model_id=model_id, context_length=context_length)
+        except RuntimeError as e:
+            logger.error(f"Error: {e}")
+            logger.info("Proceed to the next model...")
+            continue
 
-    # load the merged model
-    model = AutoModelForCausalLM.from_pretrained(
-        "merged_model",
-        trust_remote_code=True,
-        low_cpu_mem_usage=True,
-        torch_dtype=torch.float16,
-        device_map={"": "cpu"},
-    )
+        # generate a random repo id based on timestamp
+        hg_repo_id = f"{model_id.replace('/', '-')}-" + str(int(time.time()))
 
-    # upload
-    print("Start to push the model to the hub...")
-    model.push_to_hub(
-        repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
-    )
-    # upload tokenizer as well
-    tokenizer = AutoTokenizer.from_pretrained(
-        "merged_model",
-    )
-    tokenizer.push_to_hub(
-        repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
-    )
-    # submit
-    submit_task(task_id, f"{HG_USERNAME}/{hg_repo_id}")
-    print("Task submitted successfully")
+        # load the merged model
+        model = AutoModelForCausalLM.from_pretrained(
+            "merged_model",
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype=torch.float16,
+            device_map={"": "cpu"},
+        )
+
+        # upload
+        try:
+            logger.info("Start to push the model to the hub...")
+            model.push_to_hub(
+                repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+            )
+            # upload tokenizer as well
+            tokenizer = AutoTokenizer.from_pretrained(
+                "merged_model",
+            )
+            tokenizer.push_to_hub(
+                repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+            )
+            # submit
+            submit_task(task_id, f"{HF_USERNAME}/{hg_repo_id}", model2base_model[model_id])
+            logger.info("Task submitted successfully")
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            logger.info("Proceed to the next model...")
+            # cleanup merged_model and output
+            os.system("rm -rf merged_model")
+            os.system("rm -rf outputs")
+            continue

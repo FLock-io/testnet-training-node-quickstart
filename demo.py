@@ -6,27 +6,28 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
                           BitsAndBytesConfig, TrainingArguments)
 from trl import SFTTrainer
 
-from dataset import GemmaSFTDataset, SFTDataCollator
+from dataset import SFTDataCollator, SFTDataset
 from merge import merge_lora_to_base_model
+from utils.constants import model2template
 
 
 def train_and_merge(
-    num_train_epochs: int = 3,
+    model_id: str = "google/gemma-2b",
+    num_train_epochs: int = 1,
     per_device_train_batch_size: int = 1,
     gradient_accumulation_steps: int = 8,
     context_length: int = 512,
 ):
+    assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
         r=8,
         target_modules=[
             "q_proj",
-            "k_proj",
             "v_proj",
         ],
         task_type="CAUSAL_LM",
     )
 
-    model_id = "google/gemma-2b"
     # Load model in 4-bit to do qLoRA
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -58,10 +59,11 @@ def train_and_merge(
     )
 
     # Load dataset
-    dataset = GemmaSFTDataset(
+    dataset = SFTDataset(
         file="demo_data.jsonl",
         tokenizer=tokenizer,
         max_seq_length=context_length,
+        template=model2template[model_id],
     )
 
     # Define trainer
@@ -84,7 +86,7 @@ def train_and_merge(
     # merge lora to base model
     print("Training Completed. Start to merge the weights....")
     merge_lora_to_base_model(
-        model_name_or_path="google/gemma-2b",
+        model_name_or_path=model_id,
         adapter_name_or_path="outputs",
         save_path="merged_model",
     )
