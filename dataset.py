@@ -6,15 +6,12 @@ from loguru import logger
 from torch.utils.data import Dataset
 
 
-class GemmaSFTDataset(Dataset):
-    def __init__(self, file, tokenizer, max_seq_length):
+class SFTDataset(Dataset):
+    def __init__(self, file, tokenizer, max_seq_length, template):
         self.tokenizer = tokenizer
-        self.system_format = "<bos>"
-        self.user_format = (
-            "<start_of_turn>user\n{content}<end_of_turn>\n<start_of_turn>model\n"
-        )
-        self.assistant_format = "{content}<|eot_id|>"
-        self.system = None
+        self.system_format = template["system_format"]
+        self.user_format = template["user_format"]
+        self.assistant_format = template["assistant_format"]
 
         self.max_seq_length = max_seq_length
         logger.info("Loading data: {}".format(file))
