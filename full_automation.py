@@ -4,10 +4,11 @@ import time
 
 import requests
 import torch
+import yaml
 from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from demo import train_and_merge
+from demo import LoraTrainingArguments, train_and_merge
 from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
 
@@ -15,9 +16,15 @@ HF_USERNAME = os.environ["HF_USERNAME"]
 
 if __name__ == "__main__":
     task_id = os.environ["TASK_ID"]
+    # load trainin args
+    # define the path of the current file
+    current_folder = os.path.dirname(os.path.realpath(__file__))
+    with open(f"{current_folder}/training_args.yaml", "r") as f:
+        all_training_args = yaml.safe_load(f)
+
     task = get_task(task_id)
     # log the task info
-    print(json.dumps(task, indent=4))
+    logger.info(json.dumps(task, indent=4))
     # download data from a presigned url
     data_url = task["data"]["training_set_url"]
     context_length = task["data"]["context_length"]
@@ -25,7 +32,8 @@ if __name__ == "__main__":
 
     # filter out the model within the max_params
     model2size = {k: v for k, v in model2size.items() if v <= max_params}
-    logger.info(f"Models within the max_params: {model2size.keys()}")
+    all_training_args = {k: v for k, v in all_training_args.items() if k in model2size}
+    logger.info(f"Models within the max_params: {all_training_args.keys()}")
     # download in chunks
     response = requests.get(data_url, stream=True)
     with open("demo_data.jsonl", "wb") as f:
@@ -33,11 +41,15 @@ if __name__ == "__main__":
             f.write(chunk)
 
     # train all feasible models and merge
-    for model_id in model2size.keys():
+    for model_id in all_training_args.keys():
         logger.info(f"Start to train the model {model_id}...")
         # if OOM, proceed to the next model
         try:
-            train_and_merge(model_id=model_id, context_length=context_length)
+            train_and_merge(
+                model_id=model_id,
+                context_length=context_length,
+                training_args=LoraTrainingArguments(**all_training_args[model_id]),
+            )
         except RuntimeError as e:
             logger.error(f"Error: {e}")
             logger.info("Proceed to the next model...")

@@ -21,6 +21,23 @@ pip install -r requirements.txt
 - [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please ensure you merge the adapter before uploading to your Hugging Face repository.
 - [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for a Gemma-2B model.
 - [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
+- [`training_args.yaml`](training_args.yaml) - A YAML defines the training hyper-parameters for fine-tuning. A detailed explanation on LoRA config can be found here: [LoRA Fine-tuning & Hyperparameters Explained](https://www.entrypointai.com/blog/lora-fine-tuning/)
+
+### Full Automation
+
+Simply run
+
+```bash
+TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HF_USERNAME="your-hf-user-name" python full_automation.py
+```
+
+The above command will automatically train and submit multiple LLMs that are smaller the max parameters limitation for the given task.
+
+#### Bypass certain models
+
+If you want to bypass certain models, simply comment out the model config in the [`training_args.yaml`](training_args.yaml)
+
+---
 
 ### Play with demo.py
 
@@ -39,7 +56,6 @@ This command initiates fine-tuning on the demo dataset, saves the fine-tuned mod
 #### Upload the model folder to your HuggingFace repo
 
 [HuggingFace Models Uploading](https://huggingface.co/docs/hub/en/models-uploading)
-
 
 #### Getting the task id
 
@@ -64,13 +80,3 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
     }
 }'
 ```
-
-### Full Automation
-
-Simply run
-
-```bash
-TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HF_USERNAME="your-hf-user-name" python full_automation.py
-```
-
-The above command will automatically train and submit multiple LLMs that are smaller the max parameters limitation for the given task.
