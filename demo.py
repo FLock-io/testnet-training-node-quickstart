@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 import torch
 from peft import LoraConfig
@@ -23,9 +23,7 @@ class LoraTrainingArguments:
 
 
 def train_and_merge(
-    model_id: str,
-    context_length: int,
-    training_args: LoraTrainingArguments
+    model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
     assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
