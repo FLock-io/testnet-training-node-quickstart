@@ -21,6 +21,7 @@ pip install -r requirements.txt
 - [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please ensure you merge the adapter before uploading to your Hugging Face repository.
 - [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for a Gemma-2B model.
 - [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
+- [`training_args.yaml`](training_args.yaml) - A YAML defines the training hyper-parameters for fine-tuning. A detailed explanation on LoRA config can be found here: [LoRA Fine-tuning & Hyperparameters Explained](https://www.entrypointai.com/blog/lora-fine-tuning/)
 
 ### Play with demo.py
 
