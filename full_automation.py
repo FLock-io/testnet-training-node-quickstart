@@ -6,8 +6,9 @@ import requests
 import torch
 from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import yaml
 
-from demo import train_and_merge
+from demo import train_and_merge, TrainingArguments
 from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
 
@@ -15,6 +16,12 @@ HF_USERNAME = os.environ["HF_USERNAME"]
 
 if __name__ == "__main__":
     task_id = os.environ["TASK_ID"]
+    # load trainin args
+    # define the path of the current file
+    current_folder = os.path.dirname(os.path.realpath(__file__))
+    with open(f"{current_folder}/training_args.yaml", "r") as f:
+        all_training_args = yaml.safe_load(f)
+    
     task = get_task(task_id)
     # log the task info
     print(json.dumps(task, indent=4))
@@ -37,7 +44,8 @@ if __name__ == "__main__":
         logger.info(f"Start to train the model {model_id}...")
         # if OOM, proceed to the next model
         try:
-            train_and_merge(model_id=model_id, context_length=context_length)
+            train_and_merge(model_id=model_id, context_length=context_length, 
+                            training_args=TrainingArguments(**all_training_args[model_id]))
         except RuntimeError as e:
             logger.error(f"Error: {e}")
             logger.info("Proceed to the next model...")

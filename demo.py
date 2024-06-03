@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 
 import torch
@@ -11,20 +12,30 @@ from merge import merge_lora_to_base_model
 from utils.constants import model2template
 
 
+@dataclass
+class LoraTrainingArguments:
+    per_device_train_batch_size: int
+    gradient_accumulation_steps: int
+    num_train_epochs: int
+    lora_rank: int
+    lora_alpha: int
+    lora_dropout: int
+
+
 def train_and_merge(
-    model_id: str = "google/gemma-2b",
-    num_train_epochs: int = 1,
-    per_device_train_batch_size: int = 1,
-    gradient_accumulation_steps: int = 8,
-    context_length: int = 512,
+    model_id: str,
+    context_length: int,
+    training_args: LoraTrainingArguments
 ):
     assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
-        r=8,
+        r=training_args.lora_rank,
         target_modules=[
             "q_proj",
             "v_proj",
         ],
+        lora_alpha=training_args.lora_alpha,
+        lora_dropout=training_args.lora_dropout,
         task_type="CAUSAL_LM",
     )
 
@@ -36,8 +47,8 @@ def train_and_merge(
     )
 
     training_args = TrainingArguments(
-        per_device_train_batch_size=per_device_train_batch_size,
-        gradient_accumulation_steps=gradient_accumulation_steps,
+        per_device_train_batch_size=training_args.per_device_train_batch_size,
+        gradient_accumulation_steps=training_args.gradient_accumulation_steps,
         warmup_steps=100,
         learning_rate=2e-4,
         bf16=True,
@@ -45,7 +56,7 @@ def train_and_merge(
         output_dir="outputs",
         optim="paged_adamw_8bit",
         remove_unused_columns=False,
-        num_train_epochs=num_train_epochs,
+        num_train_epochs=training_args.num_train_epochs,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
