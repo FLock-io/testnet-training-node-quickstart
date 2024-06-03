@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     task = get_task(task_id)
     # log the task info
-    print(json.dumps(task, indent=4))
+    logger.info(json.dumps(task, indent=4))
     # download data from a presigned url
     data_url = task["data"]["training_set_url"]
     context_length = task["data"]["context_length"]
@@ -40,7 +40,7 @@ if __name__ == "__main__":
             f.write(chunk)
 
     # train all feasible models and merge
-    for model_id in model2size.keys():
+    for model_id in all_training_args.keys():
         logger.info(f"Start to train the model {model_id}...")
         # if OOM, proceed to the next model
         try:
