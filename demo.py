@@ -3,9 +3,8 @@ from dataclasses import dataclass
 
 import torch
 from peft import LoraConfig
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig, TrainingArguments)
-from trl import SFTTrainer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from trl import SFTTrainer, SFTConfig
 
 from dataset import SFTDataCollator, SFTDataset
 from merge import merge_lora_to_base_model
@@ -44,7 +43,7 @@ def train_and_merge(
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
 
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         per_device_train_batch_size=training_args.per_device_train_batch_size,
         gradient_accumulation_steps=training_args.gradient_accumulation_steps,
         warmup_steps=100,
@@ -55,6 +54,7 @@ def train_and_merge(
         optim="paged_adamw_8bit",
         remove_unused_columns=False,
         num_train_epochs=training_args.num_train_epochs,
+        max_seq_length=context_length,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
@@ -81,9 +81,7 @@ def train_and_merge(
         train_dataset=dataset,
         args=training_args,
         peft_config=lora_config,
-        packing=True,
         data_collator=SFTDataCollator(tokenizer, max_seq_length=context_length),
-        max_seq_length=context_length,
     )
 
     # Train model
