@@ -1,6 +1,7 @@
+import json
 import torch
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 def merge_lora_to_base_model(

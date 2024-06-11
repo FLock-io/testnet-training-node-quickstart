@@ -21,7 +21,7 @@ class LoraTrainingArguments:
     lora_dropout: int
 
 
-def train_and_merge(
+def train_lora(
     model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
     assert model_id in model2template, f"model_id {model_id} not supported"
@@ -90,14 +90,8 @@ def train_and_merge(
     # save model
     trainer.save_model("outputs")
 
-    # merge lora to base model
-    print("Training Completed. Start to merge the weights....")
-    merge_lora_to_base_model(
-        model_name_or_path=model_id,
-        adapter_name_or_path="outputs",
-        save_path="merged_model",
-    )
+    # remove checkpoint folder
+    os.system("rm -rf outputs/checkpoint-*")
 
-
-if __name__ == "__main__":
-    train_and_merge()
+    # upload lora weights and tokenizer
+    print("Training Completed.")

@@ -3,12 +3,11 @@ import os
 import time
 
 import requests
-import torch
 import yaml
 from loguru import logger
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub import HfApi
 
-from demo import LoraTrainingArguments, train_and_merge
+from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
 
@@ -45,7 +44,7 @@ if __name__ == "__main__":
         logger.info(f"Start to train the model {model_id}...")
         # if OOM, proceed to the next model
         try:
-            train_and_merge(
+            train_lora(
                 model_id=model_id,
                 context_length=context_length,
                 training_args=LoraTrainingArguments(**all_training_args[model_id]),
@@ -58,27 +57,17 @@ if __name__ == "__main__":
         # generate a random repo id based on timestamp
         hg_repo_id = f"{model_id.replace('/', '-')}-" + str(int(time.time()))
 
-        # load the merged model
-        model = AutoModelForCausalLM.from_pretrained(
-            "merged_model",
-            trust_remote_code=True,
-            low_cpu_mem_usage=True,
-            torch_dtype=torch.float16,
-            device_map={"": "cpu"},
-        )
-
-        # upload
         try:
-            logger.info("Start to push the model to the hub...")
-            model.push_to_hub(
-                repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+            logger.info("Start to push the lora weight to the hub...")
+            api = HfApi(token=os.environ["HF_TOKEN"])
+            api.create_repo(
+                f"{HF_USERNAME}/{hg_repo_id}",
+                repo_type="model",
             )
-            # upload tokenizer as well
-            tokenizer = AutoTokenizer.from_pretrained(
-                "merged_model",
-            )
-            tokenizer.push_to_hub(
-                repo_id=hg_repo_id, use_temp_dir=True, token=os.environ["HF_TOKEN"]
+            api.upload_folder(
+                folder_path="outputs",
+                repo_id=f"{HF_USERNAME}/{hg_repo_id}",
+                repo_type="model",
             )
             # submit
             submit_task(
