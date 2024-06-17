@@ -27,21 +27,24 @@ def check_and_update_repo():
 
         # Get the latest local and remote commits
         local_commit = repo.head.commit
+        logger.info(f"Local commit: {local_commit.hexsha}")
+        
         remote_commit = repo.refs['origin/main'].commit
+        logger.info(f"Remote commit: {remote_commit.hexsha}")
 
         if local_commit != remote_commit:
-            print("Your repository is not up to date. Updating...")
+            logger.info("Your repository is not up to date. Updating...")
             origin.pull()
-            print("Repository updated. Restarting...")
-
+            logger.info("Repository updated. Restarting...")
+            
             # Restart the script
             os.execl(sys.executable, sys.executable, *sys.argv)
 
         else:
-            print("Your repository is up to date.")
+            logger.info("Your repository is up to date.")
 
     except GitCommandError as e:
-        print(f"Error checking or updating repository: {e}")
+        logger.error(f"Error checking or updating repository: {e}")
 
 
 
