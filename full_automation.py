@@ -32,11 +32,22 @@ def check_and_update_repo():
         remote_commit = repo.refs['origin/main'].commit
         logger.info(f"Remote commit: {remote_commit.hexsha}")
 
+        # Check if the local repository is up to date with the remote repository
         if local_commit != remote_commit:
             logger.info("Your repository is not up to date. Updating...")
-            origin.pull()
+            pull_info = origin.pull()
+            logger.info(f"Repository updated with info: {pull_info}")
+
+            # Verify if local commit has been updated
+            new_local_commit = repo.head.commit
+            logger.info(f"New local commit after pull: {new_local_commit.hexsha}")
+
+            if new_local_commit != remote_commit:
+                logger.error("Local commit did not update to the latest remote commit. Aborting restart.")
+                return
+
             logger.info("Repository updated. Restarting...")
-            
+
             # Restart the script
             os.execl(sys.executable, sys.executable, *sys.argv)
 
