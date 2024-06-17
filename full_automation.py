@@ -11,9 +11,43 @@ from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
 
+import sys
+from git import Repo, GitCommandError
+
 HF_USERNAME = os.environ["HF_USERNAME"]
 
+def check_and_update_repo():
+    repo_path = os.path.dirname(os.path.abspath(__file__))
+    repo = Repo(repo_path)
+
+    try:
+        # Get the remote repository reference
+        origin = repo.remotes.origin
+        origin.fetch()
+
+        # Get the latest local and remote commits
+        local_commit = repo.head.commit
+        remote_commit = repo.refs['origin/main'].commit
+
+        if local_commit != remote_commit:
+            print("Your repository is not up to date. Updating...")
+            origin.pull()
+            print("Repository updated. Restarting...")
+
+            # Restart the script
+            os.execl(sys.executable, sys.executable, *sys.argv)
+
+        else:
+            print("Your repository is up to date.")
+
+    except GitCommandError as e:
+        print(f"Error checking or updating repository: {e}")
+
+
+
 if __name__ == "__main__":
+    # Call the update check function during library initialization
+    check_and_update_repo()
     task_id = os.environ["TASK_ID"]
     # load trainin args
     # define the path of the current file
