@@ -16,6 +16,7 @@ from git import Repo, GitCommandError
 
 HF_USERNAME = os.environ["HF_USERNAME"]
 
+
 def check_and_update_repo():
     repo_path = os.path.dirname(os.path.abspath(__file__))
     repo = Repo(repo_path)
@@ -34,30 +35,18 @@ def check_and_update_repo():
 
         # Check if the local repository is up to date with the remote repository
         if local_commit != remote_commit:
-            logger.info("Your repository is not up to date. Updating...")
-            pull_info = origin.pull()
-            logger.info(f"Repository updated with info: {pull_info}")
+            # Display a prominent warning
+            logger.warning("Your repository is not up to date.")
+            logger.warning("Warning: A new version is available!")
+            logger.warning("Please use the following command to update the code:")
+            logger.warning("git pull")
 
-            # Verify if local commit has been updated
-            new_local_commit = repo.head.commit
-            logger.info(f"New local commit after pull: {new_local_commit.hexsha}")
-
-            if new_local_commit != remote_commit:
-                logger.error("Local commit did not update to the latest remote commit. Aborting restart.")
-                return
-
-            logger.info("Repository updated. Restarting...")
-
-            # Restart the script
-            os.execl(sys.executable, sys.executable, *sys.argv)
 
         else:
             logger.info("Your repository is up to date.")
 
     except GitCommandError as e:
         logger.error(f"Error checking or updating repository: {e}")
-
-
 
 if __name__ == "__main__":
     # Call the update check function during library initialization
