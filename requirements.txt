@@ -5,3 +5,4 @@ loguru
 trl>=0.9.3
 bitsandbytes
 pyyaml
+gitpython
