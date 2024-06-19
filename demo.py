@@ -22,7 +22,7 @@ class LoraTrainingArguments:
 
 
 def train_lora(
-    model_id: str, context_length: int, training_args: LoraTrainingArguments
+    model_id: str, context_length: int, training_args: LoraTrainingArguments, train_file: str
 ):
     assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
@@ -69,7 +69,7 @@ def train_lora(
 
     # Load dataset
     dataset = SFTDataset(
-        file="demo_data.jsonl",
+        file=train_file,
         tokenizer=tokenizer,
         max_seq_length=context_length,
         template=model2template[model_id],
