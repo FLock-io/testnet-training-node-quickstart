@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # filter out the model within the max_params
     model2size = {k: v for k, v in model2size.items() if v <= max_params}
-    all_training_args = {k: v for k, v in all_training_args.items() if k in model2size}
+    all_training_args = {k: v for k, v in all_training_args.items() if k in model2size or k.split('_')[0] in model2size}
     logger.info(f"Models within the max_params: {all_training_args.keys()}")
     # download in chunks
     response = requests.get(data_url, stream=True)
@@ -40,14 +40,15 @@ if __name__ == "__main__":
             f.write(chunk)
 
     # train all feasible models and merge
-    for model_id in all_training_args.keys():
+    for unique_model_id in all_training_args.keys():
+        model_id = unique_model_id.split('_')[0]
         logger.info(f"Start to train the model {model_id}...")
         # if OOM, proceed to the next model
         try:
             train_lora(
                 model_id=model_id,
                 context_length=context_length,
-                training_args=LoraTrainingArguments(**all_training_args[model_id]),
+                training_args=LoraTrainingArguments(**all_training_args[unique_model_id]),
             )
         except RuntimeError as e:
             logger.error(f"Error: {e}")
