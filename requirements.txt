@@ -2,6 +2,6 @@ torch>=1.13.1
 transformers>=4.37.2
 peft>=0.10.0
 loguru
-trl>=0.9.3
+trl>=0.9.3,<=0.9.6
 bitsandbytes
 pyyaml
