@@ -73,10 +73,11 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
 --header 'flock-api-key: <your-api-key-with-staking-on-this-task-as-node>' \
 --header 'Content-Type: application/json' \
 --data '{
-    "task_id": <task id>,
+    "task_id": 29,
     "data":{
-        "hg_repo_id": "<your-hg-repo-id>",
-        "base_model": "gemma"
+        "hg_repo_id": "Qwen/Qwen1.5-1.8B-Chat",
+        "base_model": "qwen1.5",
+        "gpu_type": "<GPU-used-for-training>"
     }
 }'
 ```

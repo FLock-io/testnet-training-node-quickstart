@@ -10,6 +10,7 @@ from huggingface_hub import HfApi
 from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
 from utils.flock_api import get_task, submit_task
+from utils.gpu_utils import get_gpu_type
 
 HF_USERNAME = os.environ["HF_USERNAME"]
 
@@ -56,6 +57,7 @@ if __name__ == "__main__":
 
         # generate a random repo id based on timestamp
         hg_repo_id = f"{model_id.replace('/', '-')}-" + str(int(time.time()))
+        gpu_type = get_gpu_type()
 
         try:
             logger.info("Start to push the lora weight to the hub...")
@@ -71,7 +73,7 @@ if __name__ == "__main__":
             )
             # submit
             submit_task(
-                task_id, f"{HF_USERNAME}/{hg_repo_id}", model2base_model[model_id]
+                task_id, f"{HF_USERNAME}/{hg_repo_id}", model2base_model[model_id], gpu_type
             )
             logger.info("Task submitted successfully")
         except Exception as e:
