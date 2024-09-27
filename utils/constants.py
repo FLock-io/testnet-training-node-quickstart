@@ -8,7 +8,7 @@ qwen_template = {
 gemma_template = {
     "system_format": "<bos>",
     "user_format": "<start_of_turn>user\n{content}<end_of_turn>\n<start_of_turn>model\n",
-    "assistant_format": "{content}<|eot_id|>",
+    "assistant_format": "{content}<eos>\n",
     "system": None,
 }
 
