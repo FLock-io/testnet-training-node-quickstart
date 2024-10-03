@@ -1,5 +1,6 @@
 from torch.cuda import get_device_name
 
+
 def get_gpu_type():
     try:
         gpu_name = get_device_name(0)
