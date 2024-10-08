@@ -31,7 +31,7 @@ Simply run
 TASK_ID=<task-id> FLOCK_API_KEY="<your-flock-api-key-stakes-as-node-for-the-task>" HF_TOKEN="<your-hf-token>" CUDA_VISIBLE_DEVICES=0 HF_USERNAME="your-hf-user-name" python full_automation.py
 ```
 
-The above command will automatically train and submit multiple LLMs that are smaller the max parameters limitation for the given task.
+The above command will automatically train and submit multiple LLMs that are smaller than the max parameters limitation for the given task. **Ensure that each model version is committed to the same repository to maintain version history.** Refer to the [Hugging Face documentation on commits](https://huggingface.co/docs/hub/repositories-getting-started#pushing-files) for guidance on how to manage commits effectively.
 
 #### Bypass certain models
 
@@ -55,7 +55,7 @@ This command initiates fine-tuning on the demo dataset, saves the fine-tuned mod
 
 #### Upload the model folder to your HuggingFace repo
 
-[HuggingFace Models Uploading](https://huggingface.co/docs/hub/en/models-uploading)
+To maintain a clean version history and simplify change tracking, **commit your model changes to the existing repository** rather than creating a new one for each base model. For comprehensive guidance on uploading models and managing commits, consult the Hugging Face documentation on [models uploading](https://huggingface.co/docs/hub/en/models-uploading) and the [guide on commits](https://huggingface.co/docs/hub/repositories-getting-started#pushing-files).
 
 #### Getting the task id
 
