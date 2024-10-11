@@ -77,7 +77,14 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
     "data":{
         "hg_repo_id": "Qwen/Qwen1.5-1.8B-Chat",
         "base_model": "qwen1.5",
-        "gpu_type": "<GPU-used-for-training>"
+        "gpu_type": "<GPU-used-for-training>",
+        "revision": "<huggingface-model-commit-hash>"
     }
 }'
 ```
+
+- `task_id`: The ID of the task to which you are submitting a model.
+- `hg_repo_id`: The Hugging Face repository where the model is stored, typically in the format `username/repository-name`.
+- `base_model`: The base model used for training. A list of all supported models can be found [here](https://github.com/FLock-io/llm-loss-validator/blob/main/src/core/constant.py).
+- `gpu_type`: The type of GPU used for training the model.
+- `revision`: The commit hash from the Hugging Face repository. This uniquely identifies the version of the model that was trained and submitted, allowing for precise tracking of changes and updates.
