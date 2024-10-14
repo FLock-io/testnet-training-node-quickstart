@@ -20,7 +20,6 @@ class LoraTrainingArguments:
     lora_alpha: int
     lora_dropout: int
 
-
 def train_lora(
     model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
@@ -42,7 +41,7 @@ def train_lora(
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
-
+    # ToDo :  Look into better training configs
     training_args = SFTConfig(
         per_device_train_batch_size=training_args.per_device_train_batch_size,
         gradient_accumulation_steps=training_args.gradient_accumulation_steps,
