@@ -1,4 +1,4 @@
-import os
+import os, sys
 from dataclasses import dataclass
 
 import torch
@@ -24,17 +24,18 @@ def train_lora(
     model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
     assert model_id in model2template, f"model_id {model_id} not supported"
+    if model_id == "microsoft/Phi-3.5-mini-instruct":
+        target_modules = ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+    else:
+        target_modules = ["q_proj", "v_proj"]
     lora_config = LoraConfig(
         r=training_args.lora_rank,
-        target_modules=[
-            "q_proj",
-            "v_proj",
-        ],
+        target_modules=target_modules,
         lora_alpha=training_args.lora_alpha,
         lora_dropout=training_args.lora_dropout,
         task_type="CAUSAL_LM",
     )
-
+    # Todo look for 8 bit quantization
     # Load model in 4-bit to do qLoRA
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -53,7 +54,7 @@ def train_lora(
         optim="paged_adamw_8bit",
         remove_unused_columns=False,
         num_train_epochs=training_args.num_train_epochs,
-        max_seq_length=context_length,
+        max_seq_length=context_length
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
@@ -73,7 +74,6 @@ def train_lora(
         max_seq_length=context_length,
         template=model2template[model_id],
     )
-
     # Define trainer
     trainer = SFTTrainer(
         model=model,

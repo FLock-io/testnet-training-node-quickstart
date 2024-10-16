@@ -39,5 +39,6 @@ def submit_task(
         data=payload,
     )
     if response.status_code != 200:
+        print(response.text)
         raise Exception(f"Failed to submit task: {response.text}")
     return response.json()

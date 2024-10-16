@@ -30,9 +30,10 @@ if __name__ == "__main__":
     context_length = task["data"]["context_length"]
     max_params = task["data"]["max_params"]
 
-    # filter out the model within the max_params
-    model2size = {k: v for k, v in model2size.items() if v <= max_params}
-    all_training_args = {k: v for k, v in all_training_args.items() if k in model2size}
+    # # filter out the model within the max_params
+    # model2size = {k: v for k, v in model2size.items() if v <= max_params}
+    # all_training_args = {k: v for k, v in all_training_args.items() if k in model2size}
+    all_training_args = {k: v for k, v in all_training_args.items() }
     logger.info(f"Models within the max_params: {all_training_args.keys()}")
     # download in chunks
     response = requests.get(data_url, stream=True)
@@ -70,6 +71,7 @@ if __name__ == "__main__":
                     repo_type="model",
                 )
             except Exception as e:
+                logger.info(f"Error: {e}")
                 logger.info(
                     f"Repo {repo_name} already exists. Will commit the new version."
                 )
@@ -84,10 +86,10 @@ if __name__ == "__main__":
             logger.info(f"Commit hash: {commit_hash}")
             logger.info(f"Repo name: {repo_name}")
             # submit
-            submit_task(
-                task_id, repo_name, model2base_model[model_id], gpu_type, commit_hash
-            )
-            logger.info("Task submitted successfully")
+            # submit_task(
+            #     task_id, repo_name, model2base_model[model_id], gpu_type, commit_hash
+            # )
+            # logger.info("Task submitted successfully")
         except Exception as e:
             logger.error(f"Error: {e}")
             logger.info("Proceed to the next model...")
