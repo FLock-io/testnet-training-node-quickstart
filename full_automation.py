@@ -5,12 +5,12 @@ import time
 import requests
 import yaml
 from loguru import logger
-from huggingface_hub import HfApi
 
 from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
-from utils.flock_api import get_task, submit_task
+from utils.flock_api import get_task, get_address
 from utils.gpu_utils import get_gpu_type
+from utils.cloudflare_utils import CloudStorage
 
 HF_USERNAME = os.environ["HF_USERNAME"]
 
@@ -59,34 +59,21 @@ if __name__ == "__main__":
         gpu_type = get_gpu_type()
 
         try:
-            logger.info("Start to push the lora weight to the hub...")
-            api = HfApi(token=os.environ["HF_TOKEN"])
-            repo_name = f"{HF_USERNAME}/task-{task_id}-{model_id.replace('/', '-')}"
-            # check whether the repo exists
-            try:
-                api.create_repo(
-                    repo_name,
-                    exist_ok=False,
-                    repo_type="model",
-                )
-            except Exception as e:
-                logger.info(
-                    f"Repo {repo_name} already exists. Will commit the new version."
-                )
+            logger.info("Start to push the lora weight to the cloudflare R2...")
 
-            commit_message = api.upload_folder(
-                folder_path="outputs",
-                repo_id=repo_name,
-                repo_type="model",
+            upload_data = get_address(
+                task_id,  model2base_model[model_id], gpu_type
             )
-            # get commit hash
-            commit_hash = commit_message.oid
-            logger.info(f"Commit hash: {commit_hash}")
-            logger.info(f"Repo name: {repo_name}")
-            # submit
-            submit_task(
-                task_id, repo_name, model2base_model[model_id], gpu_type, commit_hash
+            cf_storage = CloudStorage(
+                access_key=upload_data["data"]["access_key"],
+                secret_key=upload_data["data"]["secret_key"],
+                endpoint_url=upload_data["data"]["endpoint_url"],
+                session_token=upload_data["data"]["session_token"],
+                bucket=upload_data["data"]["bucket"]
             )
+            cf_storage.initialize()
+            cf_storage.upload_folder(local_folder="outputs",
+                                     cloud_path=upload_data["data"]["folder_name"])
             logger.info("Task submitted successfully")
         except Exception as e:
             logger.error(f"Error: {e}")
