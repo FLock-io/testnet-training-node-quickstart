@@ -7,7 +7,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTTrainer, SFTConfig
 
 from dataset import SFTDataCollator, SFTDataset
-from merge import merge_lora_to_base_model
 from utils.constants import model2template
 
 
