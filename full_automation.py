@@ -8,11 +8,9 @@ from loguru import logger
 
 from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
-from utils.flock_api import get_task, get_address
+from utils.flock_api import get_task, submit_task, get_address
 from utils.gpu_utils import get_gpu_type
 from utils.cloudflare_utils import CloudStorage
-
-HF_USERNAME = os.environ["HF_USERNAME"]
 
 if __name__ == "__main__":
     task_id = os.environ["TASK_ID"]
@@ -61,9 +59,7 @@ if __name__ == "__main__":
         try:
             logger.info("Start to push the lora weight to the cloudflare R2...")
 
-            upload_data = get_address(
-                task_id,  model2base_model[model_id], gpu_type
-            )
+            upload_data = get_address(task_id)
             cf_storage = CloudStorage(
                 access_key=upload_data["data"]["access_key"],
                 secret_key=upload_data["data"]["secret_key"],
@@ -74,6 +70,10 @@ if __name__ == "__main__":
             cf_storage.initialize()
             cf_storage.upload_folder(local_folder="outputs",
                                      cloud_path=upload_data["data"]["folder_name"])
+            submit_task(
+                task_id, model2base_model[model_id], gpu_type,
+                upload_data["data"]["bucket"], upload_data["data"]["folder_name"]
+            )
             logger.info("Task submitted successfully")
         except Exception as e:
             logger.error(f"Error: {e}")
