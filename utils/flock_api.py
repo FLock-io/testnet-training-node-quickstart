@@ -15,13 +15,12 @@ def get_task(task_id: int):
 
 
 def submit_task(
-        task_id: int, base_model: str, gpu_type: str, bucket: str, folder_name: str
+    task_id: int, base_model: str, gpu_type: str, bucket: str, folder_name: str
 ):
     payload = json.dumps(
         {
             "task_id": task_id,
             "data": {
-
                 "base_model": base_model,
                 "gpu_type": gpu_type,
                 "bucket": bucket,
@@ -44,9 +43,7 @@ def submit_task(
     return response.json()
 
 
-def get_address(
-        task_id: int
-):
+def get_address(task_id: int):
     payload = json.dumps(
         {
             "task_id": task_id,

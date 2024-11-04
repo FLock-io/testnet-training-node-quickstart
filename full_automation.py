@@ -64,14 +64,18 @@ if __name__ == "__main__":
                 secret_key=upload_data["data"]["secret_key"],
                 endpoint_url=upload_data["data"]["endpoint_url"],
                 session_token=upload_data["data"]["session_token"],
-                bucket=upload_data["data"]["bucket"]
+                bucket=upload_data["data"]["bucket"],
             )
             cf_storage.initialize()
-            cf_storage.upload_folder(local_folder="outputs",
-                                     cloud_path=upload_data["data"]["folder_name"])
+            cf_storage.upload_folder(
+                local_folder="outputs", cloud_path=upload_data["data"]["folder_name"]
+            )
             submit_task(
-                task_id, model2base_model[model_id], gpu_type,
-                upload_data["data"]["bucket"], upload_data["data"]["folder_name"]
+                task_id,
+                model2base_model[model_id],
+                gpu_type,
+                upload_data["data"]["bucket"],
+                upload_data["data"]["folder_name"],
             )
             logger.info("Task submitted successfully")
         except Exception as e:

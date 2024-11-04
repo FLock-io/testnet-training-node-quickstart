@@ -17,13 +17,22 @@ class ProgressPercentage:
         with self._lock:
             self._seen_so_far += bytes_amount
             percentage = (self._seen_so_far / self.size) * 100
-            logger.info("\r%s %s / %s  (%.2f%%)" % (
-                self.filename, self._seen_so_far, self.size,
-                percentage), end="")
+            logger.info(
+                "\r%s %s / %s  (%.2f%%)"
+                % (self.filename, self._seen_so_far, self.size, percentage),
+                end="",
+            )
 
 
 class CloudStorage:
-    def __init__(self, access_key=None, secret_key=None, endpoint_url=None, bucket=None, session_token=None):
+    def __init__(
+        self,
+        access_key=None,
+        secret_key=None,
+        endpoint_url=None,
+        bucket=None,
+        session_token=None,
+    ):
         self.access_key = access_key
         self.secret_key = secret_key
         self.endpoint_url = endpoint_url
@@ -32,15 +41,22 @@ class CloudStorage:
         self.session_token = session_token
 
     def initialize(self):
-        if self.access_key is None or self.secret_key is None or self.endpoint_url is None:
-            logger.error("Please provide access_key, secret_key, session_token and endpoint_url")
+        if (
+            self.access_key is None
+            or self.secret_key is None
+            or self.endpoint_url is None
+        ):
+            logger.error(
+                "Please provide access_key, secret_key, session_token and endpoint_url"
+            )
             raise
-        self.client = boto3.client('s3',
-                                   endpoint_url=self.endpoint_url,
-                                   aws_access_key_id=self.access_key,
-                                   aws_secret_access_key=self.secret_key,
-                                   aws_session_token=self.session_token
-                                   )
+        self.client = boto3.client(
+            "s3",
+            endpoint_url=self.endpoint_url,
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+            aws_session_token=self.session_token,
+        )
         return self
 
     def upload_folder(self, local_folder, cloud_path, bucket=None):
@@ -55,9 +71,13 @@ class CloudStorage:
                 localFilePath = os.path.join(root, file)
                 relativePath = os.path.relpath(localFilePath, local_folder)
                 cloudPath = os.path.join(cloud_path, relativePath)
-                cloudPath = cloudPath.replace('\\', '/')
+                cloudPath = cloudPath.replace("\\", "/")
                 try:
-                    self.client.upload_file(localFilePath, bucket, cloudPath,
-                                            Callback=ProgressPercentage(localFilePath))
+                    self.client.upload_file(
+                        localFilePath,
+                        bucket,
+                        cloudPath,
+                        Callback=ProgressPercentage(localFilePath),
+                    )
                 except botocore.exceptions.ClientError as e:
                     logger.error(e)
