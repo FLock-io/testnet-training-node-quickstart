@@ -1,6 +1,6 @@
 torch>=1.13.1
 transformers>=4.43.0,<=4.45.0
-peft>=0.10.0
+peft>=0.10.0,<=0.13.2
 loguru
 trl>=0.9.3,<=0.9.6
 bitsandbytes
