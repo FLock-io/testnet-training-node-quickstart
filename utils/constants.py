@@ -2,6 +2,9 @@ qwen_template = {
     "system_format": "<|im_start|>system\n{content}<|im_end|>\n",
     "user_format": "<|im_start|>user\n{content}<|im_end|>\n<|im_start|>assistant\n",
     "assistant_format": "{content}<|im_end|>\n",
+    "tool_format": "{content}",
+    "function_format": "{content}",
+    "observation_format": "<|im_start|>tool\n{content}<|im_end|>\n<|im_start|>assistant\n",
     "system": "You are a helpful assistant.",
 }
 
@@ -9,6 +12,9 @@ gemma_template = {
     "system_format": "<bos>",
     "user_format": "<start_of_turn>user\n{content}<end_of_turn>\n<start_of_turn>model\n",
     "assistant_format": "{content}<eos>\n",
+    "tool_format": "{content}",
+    "function_format": "{content}",
+    "observation_format": "<start_of_turn>tool\n{content}<end_of_turn>\n<start_of_turn>model\n",
     "system": None,
 }
 
