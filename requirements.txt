@@ -5,3 +5,4 @@ loguru
 trl>=0.9.3,<=0.9.6
 bitsandbytes
 pyyaml
+boto3
