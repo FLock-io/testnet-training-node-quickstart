@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 import torch
 from loguru import logger
 from torch.utils.data import Dataset
+from .utils.tool_utils import tool_formater, function_formatter
 
 
 class SFTDataset(Dataset):
@@ -12,6 +13,9 @@ class SFTDataset(Dataset):
         self.system_format = template["system_format"]
         self.user_format = template["user_format"]
         self.assistant_format = template["assistant_format"]
+        self.tool_format = template["tool_format"]
+        self.function_format = template["function_format"]
+        self.observation_format = template["observation_format"]
 
         self.max_seq_length = max_seq_length
         logger.info("Loading data: {}".format(file))
@@ -39,27 +43,33 @@ class SFTDataset(Dataset):
 
         conversations = data["conversations"]
 
-        for i in range(0, len(conversations) - 1, 2):
-            if (
-                conversations[i]["role"] != "user"
-                or conversations[i + 1]["role"] != "assistant"
-            ):
-                raise ValueError("The role order of the conversation is not correct")
-            human = conversations[i]["content"].strip()
-            assistant = conversations[i + 1]["content"].strip()
+        input_buffer = ""
+        for i in range(len(conversations)):
+            role = conversations[i]["role"]
+            content = conversations[i]["content"].strip()
 
-            human = self.user_format.format(
-                content=human, stop_token=self.tokenizer.eos_token
-            )
-            assistant = self.assistant_format.format(
-                content=assistant, stop_token=self.tokenizer.eos_token
-            )
+            if role != "assistant":
+                if role == "user":
+                    human = self.user_format.format(content=content, stop_token=self.tokenizer.eos_token)
+                    input_buffer += human
+                
+                elif role == "function_call":
+                    tool_calls = function_formatter(json.loads(content))
+                    function = self.function_format.format(content=tool_calls)
+                    input_buffer += function
+                
+                elif role == "observation":
+                    observation = self.observation_format.format(content=content)
+                    input_buffer += observation
+            else:
+                assistant = self.assistant_format.format(content=content, stop_token=self.tokenizer.eos_token)
+                
+                input_tokens = self.tokenizer.encode(input_buffer, add_special_tokens=False)
+                output_tokens = self.tokenizer.encode(assistant, add_special_tokens=False)
 
-            input_tokens = self.tokenizer.encode(human, add_special_tokens=False)
-            output_tokens = self.tokenizer.encode(assistant, add_special_tokens=False)
-
-            input_ids += input_tokens + output_tokens
-            target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
+                input_ids += input_tokens + output_tokens
+                target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
+                input_buffer = ""
 
         assert len(input_ids) == len(target_mask)
 
