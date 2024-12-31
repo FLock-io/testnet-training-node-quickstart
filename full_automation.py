@@ -1,6 +1,5 @@
 import json
 import os
-import time
 
 import requests
 import yaml
@@ -69,7 +68,7 @@ if __name__ == "__main__":
                     exist_ok=False,
                     repo_type="model",
                 )
-            except Exception as e:
+            except Exception:
                 logger.info(
                     f"Repo {repo_name} already exists. Will commit the new version."
                 )

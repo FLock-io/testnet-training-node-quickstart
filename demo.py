@@ -7,7 +7,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTTrainer, SFTConfig
 
 from dataset import SFTDataCollator, SFTDataset
-from merge import merge_lora_to_base_model
 from utils.constants import model2template
 
 
@@ -96,8 +95,8 @@ def train_lora(
     # upload lora weights and tokenizer
     print("Training Completed.")
 
+
 if __name__ == "__main__":
-    
     # Define training arguments for LoRA fine-tuning
     training_args = LoraTrainingArguments(
         num_train_epochs=3,
@@ -114,7 +113,5 @@ if __name__ == "__main__":
 
     # Start LoRA fine-tuning
     train_lora(
-        model_id=model_id,
-        context_length=context_length, 
-        training_args=training_args
+        model_id=model_id, context_length=context_length, training_args=training_args
     )

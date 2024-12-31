@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 import torch
 from loguru import logger
 from torch.utils.data import Dataset
-from utils.tool_utils import tool_formater, function_formatter
+from utils.tool_utils import function_formatter
 
 
 class SFTDataset(Dataset):
@@ -50,22 +50,30 @@ class SFTDataset(Dataset):
 
             if role != "assistant":
                 if role == "user":
-                    human = self.user_format.format(content=content, stop_token=self.tokenizer.eos_token)
+                    human = self.user_format.format(
+                        content=content, stop_token=self.tokenizer.eos_token
+                    )
                     input_buffer += human
-                
+
                 elif role == "function_call":
                     tool_calls = function_formatter(json.loads(content))
                     function = self.function_format.format(content=tool_calls)
                     input_buffer += function
-                
+
                 elif role == "observation":
                     observation = self.observation_format.format(content=content)
                     input_buffer += observation
             else:
-                assistant = self.assistant_format.format(content=content, stop_token=self.tokenizer.eos_token)
-                
-                input_tokens = self.tokenizer.encode(input_buffer, add_special_tokens=False)
-                output_tokens = self.tokenizer.encode(assistant, add_special_tokens=False)
+                assistant = self.assistant_format.format(
+                    content=content, stop_token=self.tokenizer.eos_token
+                )
+
+                input_tokens = self.tokenizer.encode(
+                    input_buffer, add_special_tokens=False
+                )
+                output_tokens = self.tokenizer.encode(
+                    assistant, add_special_tokens=False
+                )
 
                 input_ids += input_tokens + output_tokens
                 target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
