@@ -81,10 +81,10 @@ class SFTDataset(Dataset):
 
         # Process the last input_buffer if not empty and no assistant role was found
         if input_buffer and len(input_ids) == 0:
-            logger.warning(f"Dataset item {index} has no assistant response. Using input buffer.")
-            input_tokens = self.tokenizer.encode(
-                input_buffer, add_special_tokens=False
+            logger.warning(
+                f"Dataset item {index} has no assistant response. Using input buffer."
             )
+            input_tokens = self.tokenizer.encode(input_buffer, add_special_tokens=False)
             input_ids = input_tokens
             target_mask = [0] * len(input_tokens)
 
