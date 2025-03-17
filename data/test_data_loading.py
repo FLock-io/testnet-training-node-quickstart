@@ -18,17 +18,17 @@ def test_data_loading(load_data):
     for line in load_data:
         try:
             data = json.loads(line)
-            assert isinstance(
-                data, dict
-            ), "Each line should be a JSON object (dictionary)"
+            assert isinstance(data, dict), (
+                "Each line should be a JSON object (dictionary)"
+            )
 
             # Check for "conversations" key
-            assert (
-                "conversations" in data
-            ), "'conversations' key is missing in the JSON object"
-            assert isinstance(
-                data["conversations"], list
-            ), "'conversations' should be a list"
+            assert "conversations" in data, (
+                "'conversations' key is missing in the JSON object"
+            )
+            assert isinstance(data["conversations"], list), (
+                "'conversations' should be a list"
+            )
 
             # Check for 'user' and 'assistant' roles within "conversations"
             roles = {conv["role"] for conv in data["conversations"] if "role" in conv}
