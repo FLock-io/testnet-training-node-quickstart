@@ -75,8 +75,8 @@ curl --location 'https://fed-ledger-prod.flock.io/api/v1/tasks/submit-result' \
 --data '{
     "task_id": 29,
     "data":{
-        "hg_repo_id": "Qwen/Qwen1.5-1.8B-Chat",
-        "base_model": "qwen1.5",
+        "hg_repo_id": "Qwen/Qwen2.5-1.5B,
+        "base_model": "qwen2.5",
         "gpu_type": "<GPU-used-for-training>",
         "revision": "<huggingface-model-commit-hash>"
     }
