@@ -1,4 +1,4 @@
-Qwen/Qwen1.5-0.5B:
+Qwen/Qwen2.5-0.5B-Instruct:
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 8
   num_train_epochs: 1
@@ -6,7 +6,7 @@ Qwen/Qwen1.5-0.5B:
   lora_alpha: 16
   lora_dropout: 0.1
 
-Qwen/Qwen1.5-1.8B:
+Qwen/Qwen2.5-1.5B-Instruct:
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 8
   num_train_epochs: 1
@@ -14,7 +14,7 @@ Qwen/Qwen1.5-1.8B:
   lora_alpha: 8
   lora_dropout: 0.1
 
-Qwen/Qwen1.5-7B:
+Qwen/Qwen2.5-7B-Instruct:
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 8
   num_train_epochs: 1
