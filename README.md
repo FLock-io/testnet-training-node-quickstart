@@ -1,6 +1,6 @@
 # testnet-training-node-quickstart
 
-This repository contains a demo script for you to fine-tune a Gemma model for train.flock.io.
+This repository contains demo scripts for you to fine-tune supported language models for train.flock.io.
 
 ## Quickstart
 
@@ -19,8 +19,8 @@ pip install -r requirements.txt
 - [`dataset.py`](dataset.py) - Contains the logic to process the raw data from `demo_data.jsonl`.
 - [`demo_data.jsonl`](demo_data.jsonl) - Follows the shareGPT format. The training data you receive from the `fed-ledger` is in exactly the same format.
 - [`merge.py`](merge.py) - Contains the utility function for merging LoRA weights. If you are training with LoRA, please ensure you merge the adapter before uploading to your Hugging Face repository.
-- [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for a Gemma-2B model.
-- [`full_automation.py`](full_automation.py) - A script that automate everything including get a task, download the training data, finetune Gemma-2B on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
+- [`demo.py`](demo.py) - A training script that implements LoRA fine-tuning for supported language models.
+- [`full_automation.py`](full_automation.py) - A script that automates everything including get a task, download the training data, finetune supported models on training data, merge weights, upload to your HuggingFace model repo, and submit the task to fed-ledger.
 - [`training_args.yaml`](training_args.yaml) - A YAML defines the training hyper-parameters for fine-tuning. A detailed explanation on LoRA config can be found here: [LoRA Fine-tuning & Hyperparameters Explained](https://www.entrypointai.com/blog/lora-fine-tuning/)
 
 ### Full Automation
@@ -48,8 +48,6 @@ Execute the following command to start the training:
 ```bash
 HF_TOKEN="hf_yourhftoken" CUDA_VISIBLE_DEVICES=0 python demo.py
 ```
-
-The HF token is required due to the Gemma License.
 
 This command initiates fine-tuning on the demo dataset, saves the fine-tuned model, merges the adapter to the base model, and saves the final model.
 
