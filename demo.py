@@ -5,7 +5,7 @@ import torch
 from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTTrainer, SFTConfig
-
+from datasets import Dataset
 from dataset import SFTDataCollator, SFTDataset
 from utils.constants import model2template
 
@@ -23,7 +23,6 @@ class LoraTrainingArguments:
 def train_lora(
     model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
-    assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
         r=training_args.lora_rank,
         target_modules=[
@@ -53,7 +52,6 @@ def train_lora(
         optim="paged_adamw_8bit",
         remove_unused_columns=False,
         num_train_epochs=training_args.num_train_epochs,
-        max_seq_length=context_length,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
@@ -74,10 +72,12 @@ def train_lora(
         template=model2template[model_id],
     )
 
+    dataset_dict = [dataset[i] for i in range(len(dataset))]
+    hf_dataset = Dataset.from_list(dataset_dict)
     # Define trainer
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
+        train_dataset=hf_dataset,
         args=training_args,
         peft_config=lora_config,
         data_collator=SFTDataCollator(tokenizer, max_seq_length=context_length),
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     )
 
     # Set model ID and context length
-    model_id = "Qwen/Qwen1.5-0.5B"
+    model_id = "Qwen/Qwen3.5-2B"
     context_length = 2048
 
     # Start LoRA fine-tuning

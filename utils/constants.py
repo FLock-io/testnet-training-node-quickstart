@@ -9,19 +9,37 @@ qwen_template = {
 }
 
 model2template = {
-    "Qwen/Qwen2.5-0.5B-Instruct": qwen_template,
-    "Qwen/Qwen2.5-1.5B-Instruct": qwen_template,
-    "Qwen/Qwen2.5-7B-Instruct": qwen_template,
+     "Qwen/Qwen3.5-0.8B": qwen_template,
+     "Qwen/Qwen3.5-0.8B-Base": qwen_template,
+     "Qwen/Qwen3.5-2B": qwen_template,
+     "Qwen/Qwen3.5-2B-Base": qwen_template,
+     "Qwen/Qwen3.5-4B": qwen_template,
+     "Qwen/Qwen3.5-4B-Base": qwen_template,
+     "Qwen/Qwen3.5-9B": qwen_template,
+     "Qwen/Qwen3.5-9B-Base": qwen_template,
+     "Qwen/Qwen3.5-27B": qwen_template,
 }
 
 model2size = {
-    "Qwen/Qwen2.5-0.5B-Instruct": 494_000_000,
-    "Qwen/Qwen2.5-1.5B-Instruct": 1_540_000_000,
-    "Qwen/Qwen2.5-7B-Instruct": 7_620_000_000,
+    "Qwen/Qwen3.5-0.8B": 853_000_000,
+    "Qwen/Qwen3.5-0.8B-Base": 853_000_000,
+    "Qwen/Qwen3.5-2B": 2_213_000_000,
+    "Qwen/Qwen3.5-2B-Base": 2_213_000_000,
+    "Qwen/Qwen3.5-4B": 4_539_000_000,
+    "Qwen/Qwen3.5-4B-Base": 4_539_000_000,
+    "Qwen/Qwen3.5-9B": 8_392_000_000,
+    "Qwen/Qwen3.5-9B-Base": 8_392_000_000,
+    "Qwen/Qwen3.5-27B": 26_085_000_000,
 }
 
 model2base_model = {
-    "Qwen/Qwen2.5-0.5B-Instruct": "qwen1.5",
-    "Qwen/Qwen2.5-1.5B-Instruct": "qwen1.5",
-    "Qwen/Qwen2.5-7B-Instruct": "qwen1.5",
+    "Qwen/Qwen3.5-0.8B": "qwen3.5",
+    "Qwen/Qwen3.5-0.8B-Base": "qwen3.5",
+    "Qwen/Qwen3.5-2B": "qwen3.5",
+    "Qwen/Qwen3.5-2B-Base": "qwen3.5",
+    "Qwen/Qwen3.5-4B": "qwen3.5",
+    "Qwen/Qwen3.5-4B-Base": "qwen3.5",
+    "Qwen/Qwen3.5-9B": "qwen3.5",
+    "Qwen/Qwen3.5-9B-Base": "qwen3.5",
+    "Qwen/Qwen3.5-27B": "qwen3.5",
 }

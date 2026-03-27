@@ -1,7 +1,6 @@
-torch>=1.13.1
-transformers>=4.43.0,<=4.45.0
-peft>=0.10.0,<=0.13.2
-loguru
-trl>=0.9.3,<=0.9.6
-bitsandbytes
 pyyaml
+torch>=1.13.1
+transformers==5.3.0
+peft==0.18.1
+loguru>=0.6.0
+huggingface-hub==1.5.0
