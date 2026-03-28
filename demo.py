@@ -23,6 +23,7 @@ class LoraTrainingArguments:
 def train_lora(
     model_id: str, context_length: int, training_args: LoraTrainingArguments
 ):
+    assert model_id in model2template, f"model_id {model_id} not supported"
     lora_config = LoraConfig(
         r=training_args.lora_rank,
         target_modules=[
