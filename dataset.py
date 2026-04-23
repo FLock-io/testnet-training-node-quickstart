@@ -34,7 +34,7 @@ class SFTDataset(Dataset):
 
         # setting system information
         if self.system_format is not None:
-            system = data["system"].strip() if "system" in data.keys() else self.system
+            system = data["system"].strip() if "system" in data.keys() else self.system_format
 
             if system is not None:
                 system_text = self.system_format.format(content=system)
