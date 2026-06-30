@@ -1,8 +1,7 @@
-pyyaml
-torch>=1.13.1
-transformers==5.3.0
-peft==0.18.1
-loguru>=0.6.0
-huggingface-hub==1.5.0
-trl>=0.20.0,<=0.29.1
-bitsandbytes
+numpy>=1.26
+torch>=2.3
+tqdm>=4.66
+requests>=2.31
+huggingface-hub>=0.23
+datasets>=2.14
+Pillow>=9.0

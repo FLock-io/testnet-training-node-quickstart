@@ -1,97 +1,109 @@
+from __future__ import annotations
+
 import json
 import os
+import subprocess
+import sys
+from pathlib import Path
 
 import requests
-import yaml
-from loguru import logger
 from huggingface_hub import HfApi
 
-from demo import LoraTrainingArguments, train_lora
-from utils.constants import model2base_model, model2size
-from utils.flock_api import get_task, submit_task
+from utils.flock_api import (
+    extract_training_hf_dataset_id,
+    extract_training_zip_url,
+    get_task,
+    submit_task,
+)
 from utils.gpu_utils import get_gpu_type
 
-HF_USERNAME = os.environ["HF_USERNAME"]
+ROOT = Path(__file__).resolve().parent
+DATA_PATH = ROOT / "data" / "robotics_vla_training_traces.zip"
+OUTPUT_DIR = ROOT / "outputs" / "basic_vla_policy"
 
-if __name__ == "__main__":
+# Default public HF training dataset (used when FedLedger does not provide a URL/dataset).
+DEFAULT_HF_TRAINING_DATASET = "random-sequence/flock-robotics-vla-training-v2"
+
+
+def download_file(url: str, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with requests.get(url, stream=True, timeout=300) as response:
+        response.raise_for_status()
+        with path.open("wb") as handle:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    handle.write(chunk)
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    return int(raw) if raw not in (None, "") else default
+
+
+def main() -> None:
     task_id = os.environ["TASK_ID"]
-    # load trainin args
-    # define the path of the current file
-    current_folder = os.path.dirname(os.path.realpath(__file__))
-    with open(f"{current_folder}/training_args.yaml", "r") as f:
-        all_training_args = yaml.safe_load(f)
+    hf_username = os.environ["HF_USERNAME"]
+    hf_token = os.environ["HF_TOKEN"]
 
     task = get_task(task_id)
-    # log the task info
-    logger.info(json.dumps(task, indent=4))
-    # download data from a presigned url
-    data_url = task["data"]["training_set_url"]
-    context_length = task["data"]["context_length"]
-    max_params = task["data"]["max_params"]
+    print(json.dumps({"task": task}, indent=2))
 
-    # filter out the model within the max_params
-    model2size = {k: v for k, v in model2size.items() if v <= max_params}
-    all_training_args = {k: v for k, v in all_training_args.items() if k in model2size}
-    logger.info(f"Models within the max_params: {all_training_args.keys()}")
-    # download in chunks
-    response = requests.get(data_url, stream=True)
-    with open("data/demo_data.jsonl", "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+    # Determine training data source:
+    # 1. If FedLedger provides a zip URL, download and use it.
+    # 2. If FedLedger provides an HF dataset ID, use that.
+    # 3. Fall back to the known default HF training dataset.
+    training_flags: list[str] = []
 
-    # train all feasible models and merge
-    for model_id in all_training_args.keys():
-        logger.info(f"Start to train the model {model_id}...")
-        # if OOM, proceed to the next model
-        try:
-            train_lora(
-                model_id=model_id,
-                context_length=context_length,
-                training_args=LoraTrainingArguments(**all_training_args[model_id]),
-            )
-        except RuntimeError as e:
-            logger.error(f"Error: {e}")
-            logger.info("Proceed to the next model...")
-            continue
+    try:
+        training_url = extract_training_zip_url(task)
+        print(f"Downloading training zip from FedLedger to {DATA_PATH}")
+        download_file(training_url, DATA_PATH)
+        training_flags = ["--data", str(DATA_PATH)]
+    except KeyError:
+        hf_dataset_id = extract_training_hf_dataset_id(task) or DEFAULT_HF_TRAINING_DATASET
+        print(f"No training zip URL found; using HF dataset: {hf_dataset_id}")
+        training_flags = ["--hf-dataset", hf_dataset_id]
 
-        # generate a random repo id based on timestamp
-        gpu_type = get_gpu_type()
+    train_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "train_basic_vla.py"),
+        *training_flags,
+        "--out",
+        str(OUTPUT_DIR),
+        "--epochs",
+        str(env_int("VLA_EPOCHS", 5)),
+        "--batch-size",
+        str(env_int("VLA_BATCH_SIZE", 128)),
+        "--step-stride",
+        str(env_int("VLA_STEP_STRIDE", 4)),
+        "--max-samples",
+        str(env_int("VLA_MAX_SAMPLES", 12000)),
+        "--device",
+        os.getenv("VLA_DEVICE", "auto"),
+    ]
+    if os.getenv("VLA_AMP", "0") == "1":
+        train_command.append("--amp")
+    subprocess.run(train_command, check=True, cwd=ROOT)
 
-        try:
-            logger.info("Start to push the lora weight to the hub...")
-            api = HfApi(token=os.environ["HF_TOKEN"])
-            repo_name = f"{HF_USERNAME}/task-{task_id}-{model_id.replace('/', '-')}"
-            # check whether the repo exists
-            try:
-                api.create_repo(
-                    repo_name,
-                    exist_ok=False,
-                    repo_type="model",
-                )
-            except Exception:
-                logger.info(
-                    f"Repo {repo_name} already exists. Will commit the new version."
-                )
+    repo_id = os.getenv("HF_REPO_ID", f"{hf_username}/robotics-vla-task-{task_id}-basic")
+    api = HfApi(token=hf_token)
+    api.create_repo(repo_id=repo_id, repo_type="model", exist_ok=True, private=True)
+    commit = api.upload_folder(
+        folder_path=str(OUTPUT_DIR),
+        repo_id=repo_id,
+        repo_type="model",
+        commit_message=f"Upload Robotics VLA basic policy for task {task_id}",
+    )
+    gpu_type = get_gpu_type()
+    submit_response = submit_task(
+        task_id=task_id,
+        hg_repo_id=repo_id,
+        base_model="robotics_vla_basic_cnn_bc",
+        gpu_type=gpu_type,
+        revision=commit.oid,
+    )
+    print(json.dumps({"repo_id": repo_id, "revision": commit.oid, "submit_response": submit_response}, indent=2))
 
-            commit_message = api.upload_folder(
-                folder_path="outputs",
-                repo_id=repo_name,
-                repo_type="model",
-            )
-            # get commit hash
-            commit_hash = commit_message.oid
-            logger.info(f"Commit hash: {commit_hash}")
-            logger.info(f"Repo name: {repo_name}")
-            # submit
-            submit_task(
-                task_id, repo_name, model2base_model[model_id], gpu_type, commit_hash
-            )
-            logger.info("Task submitted successfully")
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            logger.info("Proceed to the next model...")
-        finally:
-            # cleanup merged_model and output
-            os.system("rm -rf merged_model")
-            os.system("rm -rf outputs")
-            continue
+
+if __name__ == "__main__":
+    main()
