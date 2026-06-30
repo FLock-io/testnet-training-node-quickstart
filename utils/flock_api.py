@@ -7,7 +7,9 @@ FED_LEDGER_BASE_URL = "https://fed-ledger-prod.flock.io/api/v1"
 
 
 def get_task(task_id: int | str) -> dict[str, Any]:
-    response = requests.get(f"{FED_LEDGER_BASE_URL}/tasks/get?task_id={task_id}", timeout=60)
+    response = requests.get(
+        f"{FED_LEDGER_BASE_URL}/tasks/get?task_id={task_id}", timeout=60
+    )
     response.raise_for_status()
     return response.json()
 
@@ -47,7 +49,12 @@ def submit_task(
 
 def extract_training_zip_url(task: dict[str, Any]) -> str:
     data = task.get("data", {})
-    for key in ("training_set_url", "training_data_url", "training_zip_url", "dataset_url"):
+    for key in (
+        "training_set_url",
+        "training_data_url",
+        "training_zip_url",
+        "dataset_url",
+    ):
         value = data.get(key)
         if value:
             return str(value)

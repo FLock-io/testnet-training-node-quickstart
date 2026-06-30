@@ -29,7 +29,7 @@ ACTION_DIM = 7
 DEFAULT_HF_DATASET = "random-sequence/flock-robotics-vla-training-v2"
 
 
-ADAPTER_SOURCE = r'''
+ADAPTER_SOURCE = r"""
 from __future__ import annotations
 
 import hashlib
@@ -153,11 +153,16 @@ class BasicVLAPolicy:
 
 def load_policy(model_dir: str, device: str, dtype: str):
     return BasicVLAPolicy(model_dir=model_dir, device=device, dtype=dtype)
-'''
+"""
 
 
 class BasicVLAPolicyNet(nn.Module):
-    def __init__(self, text_dim: int = TEXT_DIM, proprio_dim: int = PROPRIO_DIM, action_dim: int = ACTION_DIM):
+    def __init__(
+        self,
+        text_dim: int = TEXT_DIM,
+        proprio_dim: int = PROPRIO_DIM,
+        action_dim: int = ACTION_DIM,
+    ):
         super().__init__()
         self.image_encoder = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=5, stride=2, padding=2),
@@ -183,16 +188,22 @@ class BasicVLAPolicyNet(nn.Module):
             nn.Tanh(),
         )
 
-    def forward(self, images: torch.Tensor, proprio: torch.Tensor, text_features: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, images: torch.Tensor, proprio: torch.Tensor, text_features: torch.Tensor
+    ) -> torch.Tensor:
         if images.ndim != 4:
-            raise ValueError(f"expected image batch shaped [B,H,W,3] or [B,3,H,W], got {tuple(images.shape)}")
+            raise ValueError(
+                f"expected image batch shaped [B,H,W,3] or [B,3,H,W], got {tuple(images.shape)}"
+            )
         if images.shape[-1] == 3:
             images = images.permute(0, 3, 1, 2)
         images = images.float()
         if images.max() > 2.0:
             images = images / 255.0
         if images.shape[-2:] != (96, 96):
-            images = F.interpolate(images, size=(96, 96), mode="bilinear", align_corners=False)
+            images = F.interpolate(
+                images, size=(96, 96), mode="bilinear", align_corners=False
+            )
         image_emb = self.image_encoder(images)
         proprio_emb = self.proprio_encoder(proprio.float())
         text_emb = self.text_encoder(text_features.float())
@@ -233,9 +244,13 @@ def text_vector(text: str, dim: int = TEXT_DIM) -> np.ndarray:
     return vec
 
 
-def proprio_vector(raw: np.ndarray, step: int, horizon: int, dim: int = PROPRIO_DIM) -> np.ndarray:
+def proprio_vector(
+    raw: np.ndarray, step: int, horizon: int, dim: int = PROPRIO_DIM
+) -> np.ndarray:
     raw = np.asarray(raw, dtype=np.float32).reshape(-1)
-    step_feature = np.asarray([float(step) / max(float(horizon), 1.0)], dtype=np.float32)
+    step_feature = np.asarray(
+        [float(step) / max(float(horizon), 1.0)], dtype=np.float32
+    )
     combined = np.concatenate([raw, step_feature], axis=0)
     if combined.size < dim:
         combined = np.pad(combined, (0, dim - combined.size))
@@ -274,7 +289,7 @@ def load_samples_from_hf(
 
     selected: list[int] = []
     for row_ids in episode_row_indices.values():
-        selected.extend(row_ids[::max(1, step_stride)])
+        selected.extend(row_ids[:: max(1, step_stride)])
 
     rng.shuffle(selected)
     if max_samples > 0:
@@ -354,7 +369,9 @@ def load_samples_from_zip(
         refs: list[tuple[int, int]] = []
         for entry_index, entry in enumerate(trajectories):
             length = int(entry["length"])
-            refs.extend((entry_index, step) for step in range(0, length, max(1, step_stride)))
+            refs.extend(
+                (entry_index, step) for step in range(0, length, max(1, step_stride))
+            )
         rng.shuffle(refs)
         if max_samples > 0:
             refs = refs[:max_samples]
@@ -368,7 +385,9 @@ def load_samples_from_zip(
         text_features: list[np.ndarray] = []
         actions: list[np.ndarray] = []
 
-        for entry_index, steps in tqdm(sorted(refs_by_entry.items()), desc="Loading trajectories"):
+        for entry_index, steps in tqdm(
+            sorted(refs_by_entry.items()), desc="Loading trajectories"
+        ):
             entry = trajectories[entry_index]
             meta = read_json_by_suffix(zf, entry["metadata"])
             episode_meta = meta.get("episode", {}) if isinstance(meta, dict) else {}
@@ -377,7 +396,11 @@ def load_samples_from_zip(
                 image_arr = npz["images"]
                 proprio_arr = npz["proprio"]
                 action_arr = npz["actions"]
-                steps_arr = npz["steps"] if "steps" in npz.files else np.arange(len(action_arr), dtype=np.int32)
+                steps_arr = (
+                    npz["steps"]
+                    if "steps" in npz.files
+                    else np.arange(len(action_arr), dtype=np.int32)
+                )
                 horizon = int(len(action_arr))
                 text = (
                     f"task {episode_meta.get('task', entry.get('task', ''))} "
@@ -388,12 +411,21 @@ def load_samples_from_zip(
                 for step in steps:
                     step = min(step, len(action_arr) - 1)
                     images.append(np.asarray(image_arr[step], dtype=np.uint8))
-                    proprio.append(proprio_vector(proprio_arr[step], int(steps_arr[step]), horizon, dim=proprio_dim))
+                    proprio.append(
+                        proprio_vector(
+                            proprio_arr[step],
+                            int(steps_arr[step]),
+                            horizon,
+                            dim=proprio_dim,
+                        )
+                    )
                     text_features.append(text_feat)
                     actions.append(np.asarray(action_arr[step], dtype=np.float32))
 
     if not actions:
-        raise ValueError("No training samples were loaded. Check --step-stride and --max-samples.")
+        raise ValueError(
+            "No training samples were loaded. Check --step-stride and --max-samples."
+        )
 
     manifest_summary = {
         "trajectory_count": int(manifest.get("trajectory_count", len(trajectories))),
@@ -427,10 +459,18 @@ def choose_device(requested: str) -> torch.device:
             return torch.device("mps")
         return torch.device("cpu")
     if requested == "cuda" and not torch.cuda.is_available():
-        print("CUDA was requested but is not available; falling back to CPU.", file=sys.stderr)
+        print(
+            "CUDA was requested but is not available; falling back to CPU.",
+            file=sys.stderr,
+        )
         return torch.device("cpu")
-    if requested == "mps" and not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
-        print("MPS was requested but is not available; falling back to CPU.", file=sys.stderr)
+    if requested == "mps" and not (
+        hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    ):
+        print(
+            "MPS was requested but is not available; falling back to CPU.",
+            file=sys.stderr,
+        )
         return torch.device("cpu")
     return torch.device(requested)
 
@@ -470,7 +510,10 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
             proprio_dim=args.proprio_dim,
         )
     else:
-        print(f"Zip not found at {zip_path}; loading from HuggingFace ({args.hf_dataset}).", flush=True)
+        print(
+            f"Zip not found at {zip_path}; loading from HuggingFace ({args.hf_dataset}).",
+            flush=True,
+        )
         samples = load_samples_from_hf(
             dataset_id=args.hf_dataset,
             max_samples=args.max_samples,
@@ -488,7 +531,9 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     )
     generator = torch.Generator().manual_seed(args.seed)
     indices = torch.randperm(len(dataset), generator=generator).tolist()
-    val_count = max(1, int(len(indices) * args.val_fraction)) if len(indices) >= 20 else 0
+    val_count = (
+        max(1, int(len(indices) * args.val_fraction)) if len(indices) >= 20 else 0
+    )
     val_indices = indices[:val_count]
     train_indices = indices[val_count:]
 
@@ -516,7 +561,9 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         proprio_dim=args.proprio_dim,
         action_dim=ACTION_DIM,
     ).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
+    )
     loss_fn = nn.MSELoss()
     scaler_enabled = device.type == "cuda" and args.amp
     scaler = torch.amp.GradScaler("cuda", enabled=scaler_enabled)
@@ -538,7 +585,9 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
             actions = actions.to(device, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
-            with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=scaler_enabled):
+            with torch.autocast(
+                device_type="cuda", dtype=torch.bfloat16, enabled=scaler_enabled
+            ):
                 pred = model(images, proprio, text_features)
                 loss = loss_fn(pred, actions)
             scaler.scale(loss).backward()
@@ -554,7 +603,9 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
             progress.set_postfix(train_mse=running_loss / max(running_count, 1))
 
         train_mse = running_loss / max(running_count, 1)
-        val_mse = evaluate(model, val_loader, device) if val_loader is not None else train_mse
+        val_mse = (
+            evaluate(model, val_loader, device) if val_loader is not None else train_mse
+        )
         val_is_finite = math.isfinite(float(val_mse))
         history.append(
             {
@@ -567,7 +618,10 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         print(f"epoch={epoch} train_mse={train_mse:.6f} val_mse={val_display}")
         if val_is_finite and val_mse < best_val:
             best_val = val_mse
-            best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
+            best_state = {
+                key: value.detach().cpu().clone()
+                for key, value in model.state_dict().items()
+            }
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -581,11 +635,26 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         "proprio_dim": args.proprio_dim,
         "action_dim": ACTION_DIM,
         "image_size": [96, 96],
-        "adapter_inputs": ["image", "proprio", "instruction", "task", "difficulty", "step", "horizon"],
-        "forbidden_adapter_inputs": ["raw_obs", "object_state", "sim_state", "mujoco_data"],
+        "adapter_inputs": [
+            "image",
+            "proprio",
+            "instruction",
+            "task",
+            "difficulty",
+            "step",
+            "horizon",
+        ],
+        "forbidden_adapter_inputs": [
+            "raw_obs",
+            "object_state",
+            "sim_state",
+            "mujoco_data",
+        ],
         "training_data": str(Path(args.data).expanduser()),
     }
-    torch.save({"state_dict": model.state_dict(), "config": config}, out_dir / "model.pt")
+    torch.save(
+        {"state_dict": model.state_dict(), "config": config}, out_dir / "model.pt"
+    )
     (out_dir / "vla_config.json").write_text(json.dumps(config, indent=2) + "\n")
     (out_dir / "flock_robotics_adapter.py").write_text(ADAPTER_SOURCE.strip() + "\n")
     report = {
@@ -598,7 +667,12 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         "history": history,
         "best_val_mse": best_val if math.isfinite(float(best_val)) else None,
         "global_steps": global_step,
-        "output_files": ["flock_robotics_adapter.py", "model.pt", "vla_config.json", "training_report.json"],
+        "output_files": [
+            "flock_robotics_adapter.py",
+            "model.pt",
+            "vla_config.json",
+            "training_report.json",
+        ],
     }
     (out_dir / "training_report.json").write_text(json.dumps(report, indent=2) + "\n")
     (out_dir / "README.md").write_text(
@@ -610,27 +684,62 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a basic submission-compatible Robotics VLA policy from the training zip.")
-    parser.add_argument("--data", default="data/robotics_vla_training_traces.zip", help="Path to a local training zip (optional; ignored if the file does not exist)")
-    parser.add_argument("--hf-dataset", default=DEFAULT_HF_DATASET, help="HuggingFace dataset id used when --data zip is absent")
-    parser.add_argument("--out", default="outputs/basic_vla_policy", help="Output model directory")
+    parser = argparse.ArgumentParser(
+        description="Train a basic submission-compatible Robotics VLA policy from the training zip."
+    )
+    parser.add_argument(
+        "--data",
+        default="data/robotics_vla_training_traces.zip",
+        help="Path to a local training zip (optional; ignored if the file does not exist)",
+    )
+    parser.add_argument(
+        "--hf-dataset",
+        default=DEFAULT_HF_DATASET,
+        help="HuggingFace dataset id used when --data zip is absent",
+    )
+    parser.add_argument(
+        "--out", default="outputs/basic_vla_policy", help="Output model directory"
+    )
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--grad-clip", type=float, default=1.0)
-    parser.add_argument("--step-stride", type=int, default=4, help="Use every Nth frame from each trajectory")
-    parser.add_argument("--max-samples", type=int, default=12000, help="Maximum frame/action pairs to load; 0 means all sampled frames")
+    parser.add_argument(
+        "--step-stride",
+        type=int,
+        default=4,
+        help="Use every Nth frame from each trajectory",
+    )
+    parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=12000,
+        help="Maximum frame/action pairs to load; 0 means all sampled frames",
+    )
     parser.add_argument("--val-fraction", type=float, default=0.1)
     parser.add_argument("--text-dim", type=int, default=TEXT_DIM)
     parser.add_argument("--proprio-dim", type=int, default=PROPRIO_DIM)
-    parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
+    parser.add_argument(
+        "--device", choices=["auto", "cuda", "mps", "cpu"], default="auto"
+    )
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--amp", action="store_true", help="Use bfloat16 autocast on CUDA")
+    parser.add_argument(
+        "--amp", action="store_true", help="Use bfloat16 autocast on CUDA"
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     training_report = train(parse_args())
-    print(json.dumps({"status": "ok", "output_files": training_report["output_files"], "best_val_mse": training_report["best_val_mse"]}, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "output_files": training_report["output_files"],
+                "best_val_mse": training_report["best_val_mse"],
+            },
+            indent=2,
+        )
+    )

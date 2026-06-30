@@ -33,7 +33,7 @@ python3 scripts/train_basic_vla.py --out outputs/basic_vla_policy
 | `reward` | float32 | Shaped task reward at this step |
 | `done` | bool | Episode termination flag |
 
-**Total timesteps:** 25,328 across 103 episodes.  
+**Total timesteps:** 25,328 across 103 episodes.
 **All trajectories are 100% successful** (task completed).
 
 ## Using a Local Zip (Optional)

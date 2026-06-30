@@ -60,7 +60,9 @@ def main() -> None:
         download_file(training_url, DATA_PATH)
         training_flags = ["--data", str(DATA_PATH)]
     except KeyError:
-        hf_dataset_id = extract_training_hf_dataset_id(task) or DEFAULT_HF_TRAINING_DATASET
+        hf_dataset_id = (
+            extract_training_hf_dataset_id(task) or DEFAULT_HF_TRAINING_DATASET
+        )
         print(f"No training zip URL found; using HF dataset: {hf_dataset_id}")
         training_flags = ["--hf-dataset", hf_dataset_id]
 
@@ -85,7 +87,9 @@ def main() -> None:
         train_command.append("--amp")
     subprocess.run(train_command, check=True, cwd=ROOT)
 
-    repo_id = os.getenv("HF_REPO_ID", f"{hf_username}/robotics-vla-task-{task_id}-basic")
+    repo_id = os.getenv(
+        "HF_REPO_ID", f"{hf_username}/robotics-vla-task-{task_id}-basic"
+    )
     api = HfApi(token=hf_token)
     api.create_repo(repo_id=repo_id, repo_type="model", exist_ok=True, private=True)
     commit = api.upload_folder(
@@ -102,7 +106,16 @@ def main() -> None:
         gpu_type=gpu_type,
         revision=commit.oid,
     )
-    print(json.dumps({"repo_id": repo_id, "revision": commit.oid, "submit_response": submit_response}, indent=2))
+    print(
+        json.dumps(
+            {
+                "repo_id": repo_id,
+                "revision": commit.oid,
+                "submit_response": submit_response,
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

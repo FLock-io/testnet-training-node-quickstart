@@ -176,7 +176,7 @@ loss                   = weighted_mean(1 − episode_score, weights=difficulty_w
 score                  = weighted_episode_score
 ```
 
-**`loss` is the primary optimisation target — lower is better.**  
+**`loss` is the primary optimisation target — lower is better.**
 A completely failing submission scores `loss = 1.0`. A perfect submission scores `loss = 0.0`.
 
 ### Evaluation timing (approximate, 4.5 B model on L40S)
