@@ -2,10 +2,11 @@ import os
 from dataclasses import dataclass
 
 import torch
+from datasets import Dataset
 from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from trl import SFTTrainer, SFTConfig
-from datasets import Dataset
+from trl import SFTConfig, SFTTrainer
+
 from dataset import SFTDataCollator, SFTDataset
 from utils.constants import model2template
 
