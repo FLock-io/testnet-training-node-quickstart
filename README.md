@@ -132,7 +132,7 @@ class Detector:                       # any object with this method
     def detect(self, video: dict) -> dict | list: ...
 ```
 
-`load_detector` is called once (`model_dir` is your repo, `device` is `"cpu"` or `"cuda"`, `dtype` e.g. `"float32"` or `"bfloat16"`). `detect` is called once per clip. Validators currently run with `device="cpu"` and `dtype="float32"` (see [What the validator sandbox allows](#what-the-validator-sandbox-allows)), so always honour the `device` argument and never assume a GPU.
+`load_detector` is called once (`model_dir` is your repo, `device` is `"cpu"` or `"cuda"`, `dtype` e.g. `"float32"` or `"bfloat16"`). `detect` is called once per clip. Validators run with `device="cuda"` and `dtype="bfloat16"` by default. An operator may run on CPU instead, so always honour the `device` argument.
 
 ### The `video` dict
 
@@ -221,7 +221,7 @@ Your code runs in a separate, locked-down process. Design for these rules from t
 - **Only the module environment is importable.** Python 3.10 or 3.11 with: `numpy`, `scipy`, `scikit-learn`, `pillow`, `opencv-python-headless`, `av`, `imageio-ffmpeg`, `torch`, `torchvision`, `transformers`, `timm`, `einops`, `safetensors`, `accelerate`, `peft`, `onnxruntime`, `huggingface-hub`. Anything else must be **vendored** into your repo as pure-Python source (the baseline does exactly that with `trainer/vic_*.py`). Native wheels cannot be vendored.
 - **Do not import `validator.*`.** The validator's code is not readable inside the sandbox. Import your own helper files as top-level modules (`import vic_features`); the repo root is on `sys.path`. Keep the adapter importable without side effects.
 - **Memory: 18 GiB by default, GPU plus host RAM together.** GPU memory is capped through the CUDA allocator fraction and host RSS is monitored; exceeding the ceiling ends the evaluation. Parameter count is only reported as telemetry.
-- **CPU for now.** The validator's default config runs detectors on the CPU, because CUDA does not yet initialise inside the sandbox (see the validator README, "Known limitations"). Make sure your detector is fast enough on CPU. Support `device="cuda"` too, for when GPU validation is switched on.
+- **GPU.** Detectors run on a CUDA GPU by default (`device="cuda"`). Honour the `device` argument, so the same submission also works on a CPU-only validator.
 - **Time.** `load_detector` (including the adapter import) must finish within 600 s. Each `detect` call has a **60 s wall-time limit**. A clip is about 6 to 10 s at 15 fps (about 100 to 150 frames at 320x240), but do not hard-code that: hidden packages may use other sizes or real footage. There is also a cumulative CPU-time budget for the whole run (7200 s by default), so do not burn CPU on many threads for no gain.
 - **Read-only filesystem.** Your repo and system libraries are read-only. The only writable place is the private scratch directory (`$TMPDIR`). Do not write caches next to your code.
 - **No secrets, no labels.** No tokens or credentials are visible, and the worker sees only pixels, fps and the canonical type list: no clip id, difficulty or label.
