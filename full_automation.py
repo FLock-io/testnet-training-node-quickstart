@@ -150,7 +150,9 @@ def main() -> None:
         ]
     )
 
-    repo_id = os.getenv("HF_REPO_ID", f"{hf_username}/video-inconsistency-task-{task_id}")
+    repo_id = os.getenv(
+        "HF_REPO_ID", f"{hf_username}/video-inconsistency-task-{task_id}"
+    )
     api = HfApi(token=hf_token)
     api.create_repo(repo_id=repo_id, repo_type="model", exist_ok=True, private=True)
     commit = api.upload_folder(
@@ -174,7 +176,11 @@ def main() -> None:
     )
     print(
         json.dumps(
-            {"repo_id": repo_id, "revision": commit.oid, "submit_response": submit_response},
+            {
+                "repo_id": repo_id,
+                "revision": commit.oid,
+                "submit_response": submit_response,
+            },
             indent=2,
         )
     )

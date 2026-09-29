@@ -18,6 +18,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+
 def _find_repo_root(start: Path) -> Path:
     """The nearest ancestor holding ``validator/modules/video_inconsistency``.
 
@@ -25,7 +26,13 @@ def _find_repo_root(start: Path) -> Path:
     which vendors the needed validator modules at its root.
     """
     for candidate in (start, *start.parents):
-        if (candidate / "validator" / "modules" / "video_inconsistency" / "issue_types.py").is_file():
+        if (
+            candidate
+            / "validator"
+            / "modules"
+            / "video_inconsistency"
+            / "issue_types.py"
+        ).is_file():
             return candidate
     return start.parents[3] if len(start.parents) > 3 else start
 
@@ -110,7 +117,9 @@ def smoke_test(out_dir: Path) -> None:
         # Force two edits (one spatial) so the feature, decoding and box paths are all exercised.
         clip = generate_clip(424242, issue_types=["frozen_frames", "inserted_object"])
         frames, fps = clip.frames, float(clip.fps)
-        print(f"[smoke] synthetic clip: {frames.shape[0]} frames, {len(clip.issues)} injected issue(s)")
+        print(
+            f"[smoke] synthetic clip: {frames.shape[0]} frames, {len(clip.issues)} injected issue(s)"
+        )
     except ImportError:
         rng = np.random.default_rng(0)
         frames = rng.integers(0, 255, (60, 120, 160, 3), dtype=np.uint8)
@@ -131,18 +140,36 @@ def smoke_test(out_dir: Path) -> None:
         }
         adapter = (out_dir / ADAPTER_FILENAME).resolve()
         completed = subprocess.run(
-            [sys.executable, "-c", _SMOKE_SCRIPT, str(adapter), str(frames_path), str(fps), str(out_dir.resolve())],
-            env=env, cwd=tmp, capture_output=True, text=True, timeout=300,
+            [
+                sys.executable,
+                "-c",
+                _SMOKE_SCRIPT,
+                str(adapter),
+                str(frames_path),
+                str(fps),
+                str(out_dir.resolve()),
+            ],
+            env=env,
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            timeout=300,
         )
     if completed.returncode != 0:
         raise SystemExit(f"[smoke] adapter failed:\n{completed.stderr[-3000:]}")
-    line = next((ln for ln in completed.stdout.splitlines() if ln.startswith("RESULT:")), None)
+    line = next(
+        (ln for ln in completed.stdout.splitlines() if ln.startswith("RESULT:")), None
+    )
     if line is None:
-        raise SystemExit(f"[smoke] adapter printed no result:\n{completed.stdout[-2000:]}")
-    raw = json.loads(line[len("RESULT:"):])
+        raise SystemExit(
+            f"[smoke] adapter printed no result:\n{completed.stdout[-2000:]}"
+        )
+    raw = json.loads(line[len("RESULT:") :])
     duration = frames.shape[0] / fps
     try:
-        from validator.modules.video_inconsistency.predictions import parse_detector_output
+        from validator.modules.video_inconsistency.predictions import (
+            parse_detector_output,
+        )
     except ImportError:
         print("[smoke] validator parser unavailable; output not schema-checked")
         print(f"[smoke] adapter returned {len(raw.get('issues', []))} issue(s)")
@@ -150,36 +177,54 @@ def smoke_test(out_dir: Path) -> None:
     parsed = parse_detector_output(raw, duration)
     print(f"[smoke] OK: output is schema-valid, {len(parsed)} issue(s):")
     for issue in parsed:
-        print(f"    {issue.type:18s} {issue.start_time:5.2f}-{issue.end_time:5.2f}s conf {issue.confidence:.2f}")
+        print(
+            f"    {issue.type:18s} {issue.start_time:5.2f}-{issue.end_time:5.2f}s conf {issue.confidence:.2f}"
+        )
 
 
 def push_to_hub(out_dir: Path, repo_id: str) -> None:
     """Create a PRIVATE repo and upload the folder. The token comes only from $HF_TOKEN."""
     token = os.environ.get("HF_TOKEN")
     if not token:
-        raise SystemExit("set the HF_TOKEN environment variable (never pass a token on the command line)")
+        raise SystemExit(
+            "set the HF_TOKEN environment variable (never pass a token on the command line)"
+        )
     from huggingface_hub import HfApi
 
     api = HfApi(token=token)
     api.create_repo(repo_id, repo_type="model", private=True, exist_ok=True)
     if not api.repo_info(repo_id, repo_type="model").private:
-        raise SystemExit(f"{repo_id} already exists and is PUBLIC; make it private or pick another name")
+        raise SystemExit(
+            f"{repo_id} already exists and is PUBLIC; make it private or pick another name"
+        )
     api.upload_folder(
-        repo_id=repo_id, repo_type="model", folder_path=str(out_dir),
+        repo_id=repo_id,
+        repo_type="model",
+        folder_path=str(out_dir),
         ignore_patterns=["__pycache__", "*.pyc"],
     )
-    print(f"[hub] uploaded {out_dir} to {repo_id}; the repo is PRIVATE (created/kept private=True)")
+    print(
+        f"[hub] uploaded {out_dir} to {repo_id}; the repo is PRIVATE (created/kept private=True)"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--weights-dir", default=None, help="train.py output dir (omit for the heuristic detector)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--weights-dir",
+        default=None,
+        help="train.py output dir (omit for the heuristic detector)",
+    )
     parser.add_argument("--out-dir", required=True, help="submission folder to create")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--push-to-hub", metavar="REPO_ID", default=None)
     args = parser.parse_args(argv)
 
-    out_dir = build_submission(Path(args.weights_dir) if args.weights_dir else None, Path(args.out_dir))
+    out_dir = build_submission(
+        Path(args.weights_dir) if args.weights_dir else None, Path(args.out_dir)
+    )
     print(f"[package] wrote {out_dir}: {sorted(p.name for p in out_dir.iterdir())}")
     if args.smoke_test:
         smoke_test(out_dir)

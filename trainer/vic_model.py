@@ -81,7 +81,9 @@ if nn is not None:
             self.act = nn.GELU()
             self.drop = nn.Dropout(dropout)
 
-        def forward(self, x: "torch.Tensor", mask: "torch.Tensor | None") -> "torch.Tensor":
+        def forward(
+            self, x: "torch.Tensor", mask: "torch.Tensor | None"
+        ) -> "torch.Tensor":
             y = self.mix(self.drop(self.act(self.conv(self.act(x)))))
             x = x + y
             # Zero the padded positions after every block so training on padded batches sees
@@ -101,14 +103,20 @@ if nn is not None:
         ) -> None:
             super().__init__()
             self.in_proj = nn.Conv1d(in_features, hidden, kernel_size=1)
-            self.blocks = nn.ModuleList(_ResidualBlock(hidden, d, dropout) for d in dilations)
-            self.head = nn.Sequential(nn.GELU(), nn.Dropout(dropout), nn.Conv1d(hidden, num_classes, 1))
+            self.blocks = nn.ModuleList(
+                _ResidualBlock(hidden, d, dropout) for d in dilations
+            )
+            self.head = nn.Sequential(
+                nn.GELU(), nn.Dropout(dropout), nn.Conv1d(hidden, num_classes, 1)
+            )
 
         def forward(
             self, features: "torch.Tensor", mask: "torch.Tensor | None" = None
         ) -> "torch.Tensor":
             """``mask`` is ``(B, T)`` with 1 for real frames and 0 for padding (optional)."""
-            channel_mask = None if mask is None else mask.unsqueeze(1).to(features.dtype)
+            channel_mask = (
+                None if mask is None else mask.unsqueeze(1).to(features.dtype)
+            )
             x = self.in_proj(features.transpose(1, 2))
             if channel_mask is not None:
                 x = x * channel_mask
@@ -214,7 +222,12 @@ def decode_intervals(
         min_table.update(min_frames)
 
     def make_issue(
-        name: str, curve: np.ndarray, start: int, end: int, threshold: float, ceiling: float = 1.0
+        name: str,
+        curve: np.ndarray,
+        start: int,
+        end: int,
+        threshold: float,
+        ceiling: float = 1.0,
     ) -> dict[str, Any]:
         length = end - start + 1
         mean_prob = float(curve[start : end + 1].mean())
@@ -222,7 +235,9 @@ def decode_intervals(
         confidence = min(confidence, ceiling)
         if name in POINT_EVENT_TYPES:
             weights = curve[start : end + 1]
-            centre = float((np.arange(start, end + 1) * weights).sum() / max(weights.sum(), 1e-9))
+            centre = float(
+                (np.arange(start, end + 1) * weights).sum() / max(weights.sum(), 1e-9)
+            )
             boundary = int(np.clip(round(centre + 0.5), 1, max(num_frames - 1, 1)))
             start_time = end_time = min(boundary / fps, duration)
         else:
@@ -247,13 +262,22 @@ def decode_intervals(
         minimum = int(min_table.get(name, 1))
         candidate = float(min(max(candidate_floor, 0.01), threshold))
 
-        confident = [(s, e) for s, e in _runs(curve >= threshold) if e - s + 1 >= minimum]
+        confident = [
+            (s, e) for s, e in _runs(curve >= threshold) if e - s + 1 >= minimum
+        ]
         covered = np.zeros(num_frames, dtype=bool)
         for start, end in confident:
             covered[start : end + 1] = True
             # A run of an "off" type is only a candidate: keep it (capped) rather than dropping it.
             issues.append(
-                make_issue(name, curve, start, end, threshold, OFF_CONFIDENCE_CEILING if off else 1.0)
+                make_issue(
+                    name,
+                    curve,
+                    start,
+                    end,
+                    threshold,
+                    OFF_CONFIDENCE_CEILING if off else 1.0,
+                )
             )
         if candidate >= threshold:
             continue
@@ -266,7 +290,14 @@ def decode_intervals(
                 if sub_end - sub_start + 1 < minimum:
                     continue
                 issues.append(
-                    make_issue(name, curve, start + sub_start, start + sub_end, threshold, CANDIDATE_CEILING)
+                    make_issue(
+                        name,
+                        curve,
+                        start + sub_start,
+                        start + sub_end,
+                        threshold,
+                        CANDIDATE_CEILING,
+                    )
                 )
     issues.sort(key=lambda item: -item["confidence"])
     issues = issues[:max_issues]

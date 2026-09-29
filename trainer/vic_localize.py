@@ -42,7 +42,11 @@ def _downsample_gray(frames: np.ndarray, indices: np.ndarray) -> np.ndarray:
     height, width = gray.shape[1:]
     factor = max(1, int(round(width / _MAX_WIDTH)))
     h, w = height // factor, width // factor
-    return gray[:, : h * factor, : w * factor].reshape(-1, h, factor, w, factor).mean(axis=(2, 4))
+    return (
+        gray[:, : h * factor, : w * factor]
+        .reshape(-1, h, factor, w, factor)
+        .mean(axis=(2, 4))
+    )
 
 
 def _frame_sets(
@@ -55,7 +59,9 @@ def _frame_sets(
     if inside.size > _MAX_INSIDE_FRAMES:
         inside = inside[np.linspace(0, inside.size - 1, _MAX_INSIDE_FRAMES).astype(int)]
     before = np.arange(max(0, start - 1 - _OUTSIDE_FRAMES), max(0, start - 1))
-    after = np.arange(min(num_frames, end + 1), min(num_frames, end + 1 + _OUTSIDE_FRAMES))
+    after = np.arange(
+        min(num_frames, end + 1), min(num_frames, end + 1 + _OUTSIDE_FRAMES)
+    )
     outside = np.concatenate([before, after])
     if outside.size == 0:
         return None
@@ -93,14 +99,21 @@ def connected_components(mask: np.ndarray) -> list[list[tuple[int, int]]]:
             y, x = stack.pop()
             component.append((y, x))
             for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
-                if 0 <= ny < height and 0 <= nx < width and mask[ny, nx] and not seen[ny, nx]:
+                if (
+                    0 <= ny < height
+                    and 0 <= nx < width
+                    and mask[ny, nx]
+                    and not seen[ny, nx]
+                ):
                     seen[ny, nx] = True
                     stack.append((ny, nx))
         components.append(component)
     return components
 
 
-def _box_of(component: list[tuple[int, int]], height: int, width: int, pad: float = 0.0) -> list[float]:
+def _box_of(
+    component: list[tuple[int, int]], height: int, width: int, pad: float = 0.0
+) -> list[float]:
     ys = np.array([p[0] for p in component])
     xs = np.array([p[1] for p in component])
     return _valid_box(
@@ -115,10 +128,19 @@ def _smooth3(image: np.ndarray) -> np.ndarray:
     """3x3 box blur (suppresses codec noise and isolated pixels)."""
     padded = np.pad(image, 1, mode="edge")
     height, width = image.shape
-    return sum(padded[dy : dy + height, dx : dx + width] for dy in range(3) for dx in range(3)) / 9.0
+    return (
+        sum(
+            padded[dy : dy + height, dx : dx + width]
+            for dy in range(3)
+            for dx in range(3)
+        )
+        / 9.0
+    )
 
 
-def localize_inserted_object(frames: np.ndarray, start_frame: int, end_frame: int) -> list[float]:
+def localize_inserted_object(
+    frames: np.ndarray, start_frame: int, end_frame: int
+) -> list[float]:
     """Box of the region that pops in at the interval start and out again at its end.
 
     Camera and scene motion make a comparison against frames far from the interval useless, so
@@ -142,7 +164,9 @@ def localize_inserted_object(frames: np.ndarray, start_frame: int, end_frame: in
         if not differences:
             return list(FALLBACK_BOX)
         smooth = _smooth3(np.minimum.reduce(differences))
-        threshold = max(0.6 * _otsu(smooth.ravel()), float(np.percentile(smooth, 85)) + 0.01)
+        threshold = max(
+            0.6 * _otsu(smooth.ravel()), float(np.percentile(smooth, 85)) + 0.01
+        )
         components = connected_components(smooth > threshold)
         if not components:
             return list(FALLBACK_BOX)
@@ -166,7 +190,9 @@ def _block_sharpness(gray: np.ndarray, grid: int) -> np.ndarray:
     return lap[: bh * grid, : bw * grid].reshape(grid, bh, grid, bw).mean(axis=(1, 3))
 
 
-def localize_blurred_region(frames: np.ndarray, start_frame: int, end_frame: int) -> list[float]:
+def localize_blurred_region(
+    frames: np.ndarray, start_frame: int, end_frame: int
+) -> list[float]:
     """Box of the blocks whose sharpness dropped most inside the interval."""
     try:
         sets = _frame_sets(frames.shape[0], start_frame, end_frame)
@@ -192,7 +218,9 @@ def localize_blurred_region(frames: np.ndarray, start_frame: int, end_frame: int
         return list(FALLBACK_BOX)
 
 
-def localize(issue_type: str, frames: np.ndarray, start_frame: int, end_frame: int) -> list[float] | None:
+def localize(
+    issue_type: str, frames: np.ndarray, start_frame: int, end_frame: int
+) -> list[float] | None:
     """Box for a spatial issue type, ``None`` for non-spatial types."""
     if issue_type == "inserted_object":
         return localize_inserted_object(frames, start_frame, end_frame)

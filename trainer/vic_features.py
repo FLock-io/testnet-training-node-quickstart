@@ -48,53 +48,59 @@ _HIST_BINS = 16
 
 FEATURE_NAMES: tuple[str, ...] = (
     # --- frame difference ------------------------------------------------------------
-    "diff_prev",          # mean |f_t - f_{t-1}| (0..1); ~0 when frozen
-    "diff_next",          # mean |f_{t+1} - f_t|
-    "logratio_prev",      # log((diff_prev+e)/(rolling median diff+e)): spike -> cut/drop/splice
+    "diff_prev",  # mean |f_t - f_{t-1}| (0..1); ~0 when frozen
+    "diff_next",  # mean |f_{t+1} - f_t|
+    "logratio_prev",  # log((diff_prev+e)/(rolling median diff+e)): spike -> cut/drop/splice
     "logratio_next",
-    "dup_prev",           # soft near-duplicate indicator for f_t ~= f_{t-1} (freeze)
+    "dup_prev",  # soft near-duplicate indicator for f_t ~= f_{t-1} (freeze)
     "dup_next",
     # --- colour histogram ------------------------------------------------------------
-    "hist_prev",          # L1/2 distance of the RGB histogram to the previous frame
-    "hist_med",           # ... to the rolling-median histogram (window 15)
+    "hist_prev",  # L1/2 distance of the RGB histogram to the previous frame
+    "hist_med",  # ... to the rolling-median histogram (window 15)
     # --- channel means ---------------------------------------------------------------
-    "dev9_r", "dev9_g", "dev9_b",       # channel mean minus its rolling median (window 9)
-    "dev31_r", "dev31_g", "dev31_b",    # ... window 31 (catches longer colour segments)
-    "step_r", "step_g", "step_b",       # channel mean step from the previous frame
+    "dev9_r",
+    "dev9_g",
+    "dev9_b",  # channel mean minus its rolling median (window 9)
+    "dev31_r",
+    "dev31_g",
+    "dev31_b",  # ... window 31 (catches longer colour segments)
+    "step_r",
+    "step_g",
+    "step_b",  # channel mean step from the previous frame
     # --- luminance -------------------------------------------------------------------
-    "lum_neigh",          # luminance minus mean of its two neighbours (flicker)
-    "lum_med9",           # luminance minus rolling median (window 9)
+    "lum_neigh",  # luminance minus mean of its two neighbours (flicker)
+    "lum_med9",  # luminance minus rolling median (window 9)
     # --- mirror ----------------------------------------------------------------------
-    "flip_ratio",         # log((diff(f_t, fliplr f_{t-1})+e)/(diff_prev+e))
-    "flip_diff",          # diff(f_t, fliplr f_{t-1})
+    "flip_ratio",  # log((diff(f_t, fliplr f_{t-1})+e)/(diff_prev+e))
+    "flip_diff",  # diff(f_t, fliplr f_{t-1})
     # --- zoom ------------------------------------------------------------------------
-    "zin_ratio",          # log((min_s diff(f_t, zoomin_s f_{t-1})+e)/(diff_prev+e))
-    "zout_ratio",         # log((min_s diff(zoomin_s f_t, f_{t-1})+e)/(diff_prev+e))
-    "zin_diff",           # min_s diff(f_t, zoomin_s f_{t-1})
-    "zout_diff",          # min_s diff(zoomin_s f_t, f_{t-1})
+    "zin_ratio",  # log((min_s diff(f_t, zoomin_s f_{t-1})+e)/(diff_prev+e))
+    "zout_ratio",  # log((min_s diff(zoomin_s f_t, f_{t-1})+e)/(diff_prev+e))
+    "zin_diff",  # min_s diff(f_t, zoomin_s f_{t-1})
+    "zout_diff",  # min_s diff(zoomin_s f_t, f_{t-1})
     # --- global translation (phase correlation) --------------------------------------
-    "shift_x",            # horizontal shift t-1 -> t, percent of frame width
-    "shift_y",            # vertical shift, percent of frame height
-    "shift_peak",         # phase-correlation peak height (1 = pure translation)
-    "shift_speed",        # sqrt(shift_x^2 + shift_y^2)
-    "shift_agree15",      # cosine between velocity and rolling median velocity (window 15)
-    "shift_agree31",      # ... window 31: -1 means motion runs against the trend (reversal)
+    "shift_x",  # horizontal shift t-1 -> t, percent of frame width
+    "shift_y",  # vertical shift, percent of frame height
+    "shift_peak",  # phase-correlation peak height (1 = pure translation)
+    "shift_speed",  # sqrt(shift_x^2 + shift_y^2)
+    "shift_agree15",  # cosine between velocity and rolling median velocity (window 15)
+    "shift_agree31",  # ... window 31: -1 means motion runs against the trend (reversal)
     # --- sharpness / blur ------------------------------------------------------------
-    "sharp_log",          # log mean |Laplacian| (global sharpness)
-    "sharp_dev",          # sharp_log minus its rolling median (window 31)
-    "blk_sharp_glob",     # min over 8x8 cells of log(sharpness / cell's whole-clip median)
-    "blk_sharp_roll",     # min over 8x8 cells of log(sharpness / cell's rolling median, window 31)
-    "blk_sharp_drop",     # min over cells of the frame-to-frame log sharpness change (blur onset)
-    "blk_sharp_rise",     # max over cells of the frame-to-frame log sharpness change (blur offset)
+    "sharp_log",  # log mean |Laplacian| (global sharpness)
+    "sharp_dev",  # sharp_log minus its rolling median (window 31)
+    "blk_sharp_glob",  # min over 8x8 cells of log(sharpness / cell's whole-clip median)
+    "blk_sharp_roll",  # min over 8x8 cells of log(sharpness / cell's rolling median, window 31)
+    "blk_sharp_drop",  # min over cells of the frame-to-frame log sharpness change (blur onset)
+    "blk_sharp_rise",  # max over cells of the frame-to-frame log sharpness change (blur offset)
     # --- appearance deviation (inserted object) --------------------------------------
-    "obj_max",            # max over 4x4 cells of mean |frame - rolling median frame| (window 31)
-    "obj_rel",            # obj_max minus the median cell deviation
-    "obj_frac",           # fraction of pixels deviating strongly from the rolling median
-    "obj_mean",           # mean deviation over the whole frame
-    "objg_max",           # max over 4x4 cells of mean |frame - whole-clip median frame| (RGB)
-    "objg_rel",           # objg_max minus the median cell deviation
-    "cell_spike",         # max over 8x8 cells of log(cell frame-diff / its rolling median): pop in/out
-    "cell_conc",          # log(max cell frame-diff / mean cell frame-diff): change is localised
+    "obj_max",  # max over 4x4 cells of mean |frame - rolling median frame| (window 31)
+    "obj_rel",  # obj_max minus the median cell deviation
+    "obj_frac",  # fraction of pixels deviating strongly from the rolling median
+    "obj_mean",  # mean deviation over the whole frame
+    "objg_max",  # max over 4x4 cells of mean |frame - whole-clip median frame| (RGB)
+    "objg_rel",  # objg_max minus the median cell deviation
+    "cell_spike",  # max over 8x8 cells of log(cell frame-diff / its rolling median): pop in/out
+    "cell_conc",  # log(max cell frame-diff / mean cell frame-diff): change is localised
 )
 NUM_FEATURES = len(FEATURE_NAMES)
 
@@ -114,7 +120,9 @@ def _rolling_median(x: np.ndarray, window: int) -> np.ndarray:
     return np.median(view, axis=-1).astype(x.dtype, copy=False)
 
 
-def _log_ratio(numerator: np.ndarray, denominator: np.ndarray, eps: float) -> np.ndarray:
+def _log_ratio(
+    numerator: np.ndarray, denominator: np.ndarray, eps: float
+) -> np.ndarray:
     return np.clip(np.log((numerator + eps) / (denominator + eps)), -5.0, 5.0)
 
 
@@ -123,7 +131,9 @@ def _shift_prev(x: np.ndarray) -> np.ndarray:
     return np.concatenate([x[:1], x[:-1]], axis=0)
 
 
-def _pair_to_prev_next(pair_values: np.ndarray, num_frames: int) -> tuple[np.ndarray, np.ndarray]:
+def _pair_to_prev_next(
+    pair_values: np.ndarray, num_frames: int
+) -> tuple[np.ndarray, np.ndarray]:
     """Turn ``d[i] = dist(f_i, f_{i+1})`` (length T-1) into per-frame prev/next arrays."""
     if num_frames < 2:
         zeros = np.zeros(num_frames, dtype=np.float32)
@@ -184,7 +194,9 @@ def _downsample(frames: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.concatenate(rgb_parts, axis=0)
     cells = np.concatenate(cell_parts, axis=0)
     global_var = np.concatenate(global_parts, axis=0)
-    return rgb, np.concatenate([cells.reshape(num_frames, -1), global_var[:, None]], axis=1)
+    return rgb, np.concatenate(
+        [cells.reshape(num_frames, -1), global_var[:, None]], axis=1
+    )
 
 
 def _laplacian_stats(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -205,7 +217,9 @@ def _laplacian_stats(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     )
     magnitude = np.abs(lap)
     cells = _grid_reduce(magnitude, _SHARP_GRID, np.mean)
-    return cells.astype(np.float32), magnitude.reshape(n, -1).mean(axis=1).astype(np.float32)
+    return cells.astype(np.float32), magnitude.reshape(n, -1).mean(axis=1).astype(
+        np.float32
+    )
 
 
 # ---------------------------------------------------------------------------------------
@@ -236,7 +250,9 @@ def _phase_correlation(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.nda
         empty = np.zeros(0, np.float32)
         return empty, empty.copy(), empty.copy()
     # np.hanning(n + 2)[1:-1] is strictly positive for any n >= 1 (np.hanning(1..2) is degenerate).
-    window = np.outer(np.hanning(height + 2)[1:-1], np.hanning(width + 2)[1:-1]).astype(np.float32)
+    window = np.outer(np.hanning(height + 2)[1:-1], np.hanning(width + 2)[1:-1]).astype(
+        np.float32
+    )
     spectrum = np.fft.rfft2((gray - gray.mean(axis=(1, 2), keepdims=True)) * window)
     cross = spectrum[1:] * np.conj(spectrum[:-1])
     cross /= np.abs(cross) + 1e-6
@@ -269,11 +285,15 @@ def _histograms(rgb: np.ndarray) -> np.ndarray:
     """Per-frame concatenated per-channel histograms, each channel normalised to sum 1."""
     num_frames, height, width, _ = rgb.shape
     bins = np.clip((rgb * _HIST_BINS).astype(np.int64), 0, _HIST_BINS - 1)
-    offsets = np.arange(3)[None, None, None, :] * _HIST_BINS + np.arange(num_frames)[:, None, None, None] * (
-        3 * _HIST_BINS
+    offsets = np.arange(3)[None, None, None, :] * _HIST_BINS + np.arange(num_frames)[
+        :, None, None, None
+    ] * (3 * _HIST_BINS)
+    counts = np.bincount(
+        (bins + offsets).ravel(), minlength=num_frames * 3 * _HIST_BINS
     )
-    counts = np.bincount((bins + offsets).ravel(), minlength=num_frames * 3 * _HIST_BINS)
-    return (counts.reshape(num_frames, 3 * _HIST_BINS) / float(height * width)).astype(np.float32)
+    return (counts.reshape(num_frames, 3 * _HIST_BINS) / float(height * width)).astype(
+        np.float32
+    )
 
 
 def _velocity_agreement(vx: np.ndarray, vy: np.ndarray, window: int) -> np.ndarray:
@@ -331,10 +351,14 @@ def _cell_spike_features(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     num_frames = gray.shape[0]
     if num_frames < 2:
         return np.zeros(num_frames, np.float32), np.zeros(num_frames, np.float32)
-    cell = _grid_reduce(np.abs(gray[1:] - gray[:-1]), _SHARP_GRID, np.mean).reshape(num_frames - 1, -1)
+    cell = _grid_reduce(np.abs(gray[1:] - gray[:-1]), _SHARP_GRID, np.mean).reshape(
+        num_frames - 1, -1
+    )
     spike = _log_ratio(cell, _rolling_median(cell, 31), 1e-3).max(axis=1)
     conc = np.log((cell.max(axis=1) + 1e-3) / (cell.mean(axis=1) + 1e-3))
-    return _pair_to_prev_next(spike, num_frames)[0], _pair_to_prev_next(conc, num_frames)[0]
+    return _pair_to_prev_next(spike, num_frames)[0], _pair_to_prev_next(
+        conc, num_frames
+    )[0]
 
 
 # ---------------------------------------------------------------------------------------
@@ -365,9 +389,15 @@ def extract_features(frames: np.ndarray) -> np.ndarray:
 
     # colour histogram -------------------------------------------------------------
     hists = _histograms(rgb)
-    hist_pair = 0.5 * np.abs(hists[1:] - hists[:-1]).sum(axis=1) / 3.0 if num_frames >= 2 else np.zeros(0)
+    hist_pair = (
+        0.5 * np.abs(hists[1:] - hists[:-1]).sum(axis=1) / 3.0
+        if num_frames >= 2
+        else np.zeros(0)
+    )
     cols["hist_prev"], _ = _pair_to_prev_next(hist_pair, num_frames)
-    cols["hist_med"] = (0.5 * np.abs(hists - _rolling_median(hists, 15)).sum(axis=1) / 3.0).astype(np.float32)
+    cols["hist_med"] = (
+        0.5 * np.abs(hists - _rolling_median(hists, 15)).sum(axis=1) / 3.0
+    ).astype(np.float32)
 
     # channel means and luminance --------------------------------------------------
     means = rgb.mean(axis=(1, 2))  # (T, 3)
@@ -402,8 +432,12 @@ def extract_features(frames: np.ndarray) -> np.ndarray:
         best_out = np.full(num_frames - 1, np.inf, np.float32)
         for scale in _ZOOM_SCALES:
             zoomed = _zoom_in(gray, scale)
-            best_in = np.minimum(best_in, np.abs(gray[1:] - zoomed[:-1]).mean(axis=(1, 2)))
-            best_out = np.minimum(best_out, np.abs(zoomed[1:] - gray[:-1]).mean(axis=(1, 2)))
+            best_in = np.minimum(
+                best_in, np.abs(gray[1:] - zoomed[:-1]).mean(axis=(1, 2))
+            )
+            best_out = np.minimum(
+                best_out, np.abs(zoomed[1:] - gray[:-1]).mean(axis=(1, 2))
+            )
         zin, _ = _pair_to_prev_next(best_in, num_frames)
         zout, _ = _pair_to_prev_next(best_out, num_frames)
     cols["zin_diff"], cols["zout_diff"] = zin, zout
@@ -434,26 +468,36 @@ def extract_features(frames: np.ndarray) -> np.ndarray:
     # appearance deviation ---------------------------------------------------------
     small_factor = max(1, int(round(gray.shape[2] / _OBJECT_WIDTH)))
     small = _block_mean(gray[..., None], small_factor)[..., 0]
-    cols["obj_max"], cols["obj_rel"], cols["obj_frac"], cols["obj_mean"] = _object_features(small)
+    cols["obj_max"], cols["obj_rel"], cols["obj_frac"], cols["obj_mean"] = (
+        _object_features(small)
+    )
     rgb_small = _block_mean(rgb, small_factor)
     cols["objg_max"], cols["objg_rel"] = _global_object_features(rgb_small)
     cols["cell_spike"], cols["cell_conc"] = _cell_spike_features(gray)
 
-    matrix = np.stack([np.asarray(cols[name], dtype=np.float32) for name in FEATURE_NAMES], axis=1)
-    return np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32, copy=False)
+    matrix = np.stack(
+        [np.asarray(cols[name], dtype=np.float32) for name in FEATURE_NAMES], axis=1
+    )
+    return np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0).astype(
+        np.float32, copy=False
+    )
 
 
 def compute_feature_stats(features: Sequence[np.ndarray]) -> dict[str, list[float]]:
     """Per-feature mean / std over a list of ``(T_i, F)`` matrices (for ``normalize_features``)."""
     if not features:
         raise ValueError("need at least one feature matrix")
-    stacked = np.concatenate([np.asarray(f, dtype=np.float64) for f in features], axis=0)
+    stacked = np.concatenate(
+        [np.asarray(f, dtype=np.float64) for f in features], axis=0
+    )
     mean = stacked.mean(axis=0)
     std = stacked.std(axis=0)
     return {"mean": mean.tolist(), "std": np.maximum(std, 1e-6).tolist()}
 
 
-def normalize_features(features: np.ndarray, stats: dict[str, Sequence[float]] | None) -> np.ndarray:
+def normalize_features(
+    features: np.ndarray, stats: dict[str, Sequence[float]] | None
+) -> np.ndarray:
     """Standardise with ``stats`` (from ``compute_feature_stats``) and clip to +-10 sigma."""
     if stats is None:
         return np.clip(features, -10.0, 10.0).astype(np.float32)

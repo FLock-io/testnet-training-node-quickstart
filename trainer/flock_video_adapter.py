@@ -60,11 +60,17 @@ def _sigmoid(x: np.ndarray) -> np.ndarray:
 def _peaks(score: np.ndarray, threshold: float) -> list[int]:
     """Indices of local maxima of ``score`` that reach ``threshold``."""
     padded = np.concatenate([[-1.0], score, [-1.0]])
-    is_peak = (padded[1:-1] >= threshold) & (padded[1:-1] >= padded[:-2]) & (padded[1:-1] > padded[2:])
+    is_peak = (
+        (padded[1:-1] >= threshold)
+        & (padded[1:-1] >= padded[:-2])
+        & (padded[1:-1] > padded[2:])
+    )
     return [int(i) for i in np.flatnonzero(is_peak)]
 
 
-def _pair_symmetric(score: np.ndarray, threshold: float, max_len: int) -> tuple[np.ndarray, set[int]]:
+def _pair_symmetric(
+    score: np.ndarray, threshold: float, max_len: int
+) -> tuple[np.ndarray, set[int]]:
     """A segment starts at one boundary peak and ends at the next: fill [a, b) with min score.
 
     Returns the per-frame segment score and the set of boundary frames that were paired.
@@ -149,27 +155,39 @@ def heuristic_probabilities(features: np.ndarray, fps: float) -> np.ndarray:
 
     # mirror: at a boundary, comparing against the FLIPPED previous frame fits far better.
     flip_boundary = spike * _sigmoid(-3.0 * (f["flip_ratio"] + 0.9))
-    probs[:, _TYPE_INDEX["mirrored_segment"]], mirror_used = _pair_symmetric(flip_boundary, CANDIDATE_SCORE, max_len)
+    probs[:, _TYPE_INDEX["mirrored_segment"]], mirror_used = _pair_symmetric(
+        flip_boundary, CANDIDATE_SCORE, max_len
+    )
 
     # splice: an unrelated shot changes the colour histogram completely.
     splice_boundary = _sigmoid(20.0 * (f["hist_prev"] - 0.25)) * strong_spike
-    probs[:, _TYPE_INDEX["spliced_footage"]], splice_used = _pair_symmetric(splice_boundary, CANDIDATE_SCORE, max_len)
+    probs[:, _TYPE_INDEX["spliced_footage"]], splice_used = _pair_symmetric(
+        splice_boundary, CANDIDATE_SCORE, max_len
+    )
 
     # colour grade: histogram moves a lot but the frame difference barely spikes.
     color_boundary = (
-        _sigmoid(60.0 * (f["hist_prev"] - 0.07)) * (1.0 - strong_spike) * (1.0 - splice_boundary)
+        _sigmoid(60.0 * (f["hist_prev"] - 0.07))
+        * (1.0 - strong_spike)
+        * (1.0 - splice_boundary)
     )
-    probs[:, _TYPE_INDEX["color_grade_jump"]], _ = _pair_symmetric(color_boundary, CANDIDATE_SCORE, max_len)
+    probs[:, _TYPE_INDEX["color_grade_jump"]], _ = _pair_symmetric(
+        color_boundary, CANDIDATE_SCORE, max_len
+    )
 
     # zoom: a punched-in frame matches a zoomed-in copy of its predecessor (onset) or vice versa (offset).
     not_other = (1.0 - splice_boundary) * (1.0 - flip_boundary)
     zoom_on = spike * _sigmoid(-5.0 * (f["zin_ratio"] - 0.3)) * not_other
     zoom_off = spike * _sigmoid(-5.0 * (f["zout_ratio"] - 0.3)) * not_other
-    probs[:, _TYPE_INDEX["zoom_jump"]], zoom_used = _pair_directed(zoom_on, zoom_off, CANDIDATE_SCORE, max_len)
+    probs[:, _TYPE_INDEX["zoom_jump"]], zoom_used = _pair_directed(
+        zoom_on, zoom_off, CANDIDATE_SCORE, max_len
+    )
 
     # exposure flicker: 1-4 frames whose luminance leaves the rolling median by a lot.
     flicker = _sigmoid(60.0 * (np.abs(f["lum_med9"]) - 0.06))
-    probs[:, _TYPE_INDEX["exposure_flicker"]] = _short_runs(flicker > CANDIDATE_SCORE, flicker, 4)
+    probs[:, _TYPE_INDEX["exposure_flicker"]] = _short_runs(
+        flicker > CANDIDATE_SCORE, flicker, 4
+    )
 
     # dropped frames: an isolated difference spike that no paired edit explains.
     explained = mirror_used | splice_used | zoom_used
@@ -180,11 +198,15 @@ def heuristic_probabilities(features: np.ndarray, fps: float) -> np.ndarray:
 
     # reversal: global motion runs against the clip's trend.
     moving = _sigmoid(6.0 * (f["shift_speed"] - 1.0))
-    probs[:, _TYPE_INDEX["reversed_segment"]] = _sigmoid(-8.0 * (f["shift_agree31"] + 0.5)) * moving
+    probs[:, _TYPE_INDEX["reversed_segment"]] = (
+        _sigmoid(-8.0 * (f["shift_agree31"] + 0.5)) * moving
+    )
 
     # spatial types: strict rules, expected to fire rarely (see docstring).
     probs[:, _TYPE_INDEX["inserted_object"]] = _sigmoid(40.0 * (f["objg_rel"] - 0.25))
-    probs[:, _TYPE_INDEX["blurred_region"]] = _sigmoid(-4.0 * (f["blk_sharp_glob"] + 2.5))
+    probs[:, _TYPE_INDEX["blurred_region"]] = _sigmoid(
+        -4.0 * (f["blk_sharp_glob"] + 2.5)
+    )
     return probs.astype(np.float32)
 
 
@@ -198,7 +220,9 @@ class _BaseDetector:
     min_frames: dict[str, int] | None = None
     candidate_floor: float = vic_model.CANDIDATE_FLOOR
 
-    def probabilities(self, features: np.ndarray, fps: float) -> np.ndarray:  # pragma: no cover
+    def probabilities(
+        self, features: np.ndarray, fps: float
+    ) -> np.ndarray:  # pragma: no cover
         raise NotImplementedError
 
     def detect(self, video: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +236,12 @@ class _BaseDetector:
         features = vic_features.extract_features(frames)
         probs = self.probabilities(features, fps)
         issues = vic_model.decode_intervals(
-            probs, fps, duration, self.thresholds, self.min_frames, candidate_floor=self.candidate_floor
+            probs,
+            fps,
+            duration,
+            self.thresholds,
+            self.min_frames,
+            candidate_floor=self.candidate_floor,
         )
         return {"issues": [self._finalise(issue, frames) for issue in issues]}
 
@@ -256,7 +285,9 @@ class LearnedDetector(_BaseDetector):
 
         config = json.loads((model_dir / CONFIG_FILENAME).read_text(encoding="utf-8"))
         if list(config["issue_types"]) != list(vic_model.ISSUE_TYPE_NAMES):
-            raise ValueError("vic_config.json was trained with a different issue-type order")
+            raise ValueError(
+                "vic_config.json was trained with a different issue-type order"
+            )
         if list(config["feature_names"]) != list(vic_features.FEATURE_NAMES):
             raise ValueError("vic_config.json was trained with a different feature set")
         self._torch = torch
@@ -264,11 +295,17 @@ class LearnedDetector(_BaseDetector):
         # The network is tiny: float32 is exact and fast on CPU. Half precision is only honoured
         # on GPU, where it is harmless for a model this size.
         half = {"float16": torch.float16, "bfloat16": torch.bfloat16}.get(str(dtype))
-        self.dtype = half if (half is not None and self.device.type == "cuda") else torch.float32
+        self.dtype = (
+            half if (half is not None and self.device.type == "cuda") else torch.float32
+        )
         self.stats = config["feature_stats"]
         self.thresholds = {k: float(v) for k, v in config["thresholds"].items()}
-        self.min_frames = {k: int(v) for k, v in config.get("min_frames", {}).items()} or None
-        self.candidate_floor = float(config.get("candidate_floor", vic_model.CANDIDATE_FLOOR))
+        self.min_frames = {
+            k: int(v) for k, v in config.get("min_frames", {}).items()
+        } or None
+        self.candidate_floor = float(
+            config.get("candidate_floor", vic_model.CANDIDATE_FLOOR)
+        )
         self.model = vic_model.TemporalIssueNet(**config["model"])
         self.model.load_state_dict(load_file(str(model_dir / WEIGHTS_FILENAME)))
         self.model.to(device=self.device, dtype=self.dtype).eval()
@@ -290,7 +327,9 @@ def load_detector(model_dir: str, device: str = "cpu", dtype: str = "float32") -
     validation rather than scored as a weak model.
     """
     directory = Path(model_dir)
-    has_weights = (directory / CONFIG_FILENAME).is_file() and (directory / WEIGHTS_FILENAME).is_file()
+    has_weights = (directory / CONFIG_FILENAME).is_file() and (
+        directory / WEIGHTS_FILENAME
+    ).is_file()
     if has_weights:
         return LearnedDetector(directory, device, dtype)
     return HeuristicDetector()

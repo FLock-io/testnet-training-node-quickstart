@@ -32,6 +32,7 @@ import torch
 from safetensors.torch import save_file
 from torch import nn
 
+
 def _find_repo_root(start: Path) -> Path:
     """The nearest ancestor holding ``validator/modules/video_inconsistency``.
 
@@ -39,7 +40,13 @@ def _find_repo_root(start: Path) -> Path:
     which vendors the needed validator modules at its root.
     """
     for candidate in (start, *start.parents):
-        if (candidate / "validator" / "modules" / "video_inconsistency" / "issue_types.py").is_file():
+        if (
+            candidate
+            / "validator"
+            / "modules"
+            / "video_inconsistency"
+            / "issue_types.py"
+        ).is_file():
             return candidate
     return start.parents[3] if len(start.parents) > 3 else start
 
@@ -70,7 +77,9 @@ from validator.modules.video_inconsistency.video_io import decode_video  # noqa:
 
 # The submission cannot import the validator, so vic_model hard-codes the type order. Make sure
 # the copy never silently diverges: a mismatch would permute every label.
-assert tuple(ISSUE_TYPE_NAMES) == tuple(VALIDATOR_ISSUE_TYPE_NAMES), "issue type order drifted"
+assert tuple(ISSUE_TYPE_NAMES) == tuple(VALIDATOR_ISSUE_TYPE_NAMES), (
+    "issue type order drifted"
+)
 
 CACHE_DIRNAME = "feature_cache"
 THRESHOLD_GRID = [round(float(v), 2) for v in np.arange(0.10, 0.951, 0.05)]
@@ -98,7 +107,11 @@ def read_labels(data_dir: Path) -> list[dict[str, Any]]:
         path = data_dir / name
         if path.is_file():
             with open(path, encoding="utf-8") as handle:
-                return [_normalise_record(json.loads(line), data_dir) for line in handle if line.strip()]
+                return [
+                    _normalise_record(json.loads(line), data_dir)
+                    for line in handle
+                    if line.strip()
+                ]
     raise FileNotFoundError(f"no labels.jsonl or metadata.jsonl in {data_dir}")
 
 
@@ -109,10 +122,15 @@ def resolve_splits(data_dir: Path, val_dir: str | None) -> tuple[Path, Path | No
     (when present) for validation; ``--val-dir`` overrides the latter.
     """
     train_dir, explicit_val = data_dir, Path(val_dir) if val_dir else None
-    has_labels = (data_dir / "labels.jsonl").is_file() or (data_dir / "metadata.jsonl").is_file()
+    has_labels = (data_dir / "labels.jsonl").is_file() or (
+        data_dir / "metadata.jsonl"
+    ).is_file()
     if not has_labels and (data_dir / "train" / "metadata.jsonl").is_file():
         train_dir = data_dir / "train"
-        if explicit_val is None and (data_dir / "validation" / "metadata.jsonl").is_file():
+        if (
+            explicit_val is None
+            and (data_dir / "validation" / "metadata.jsonl").is_file()
+        ):
             explicit_val = data_dir / "validation"
     return train_dir, explicit_val
 
@@ -128,7 +146,9 @@ def _file_hash(path: Path) -> str:
 def cached_features(cache_dir: Path, record: dict[str, Any]) -> np.ndarray:
     """Features of one clip, from the .npz cache when present (key = file hash + version)."""
     video_path = Path(record["_root"]) / record["clip_file"]
-    cache_path = cache_dir / f"{_file_hash(video_path)}_v{vic_features.FEATURE_VERSION}.npz"
+    cache_path = (
+        cache_dir / f"{_file_hash(video_path)}_v{vic_features.FEATURE_VERSION}.npz"
+    )
     if cache_path.exists():
         try:
             with np.load(cache_path) as data:
@@ -157,10 +177,15 @@ def load_all_features(
     out: list[np.ndarray] = []
     started = time.time()
     with mp.get_context("spawn").Pool(workers) as pool:
-        for count, features in enumerate(pool.imap(_features_job, jobs, chunksize=4), start=1):
+        for count, features in enumerate(
+            pool.imap(_features_job, jobs, chunksize=4), start=1
+        ):
             out.append(features)
             if count % 500 == 0:
-                print(f"[train] features {count}/{len(jobs)} ({time.time() - started:.0f}s)", flush=True)
+                print(
+                    f"[train] features {count}/{len(jobs)} ({time.time() - started:.0f}s)",
+                    flush=True,
+                )
     return out
 
 
@@ -178,7 +203,9 @@ def build_targets(record: dict[str, Any], num_frames: int) -> np.ndarray:
     return targets
 
 
-def build_frame_weights(record: dict[str, Any], num_frames: int, decoy_weight: float) -> np.ndarray:
+def build_frame_weights(
+    record: dict[str, Any], num_frames: int, decoy_weight: float
+) -> np.ndarray:
     """Per-frame loss weights: 1 everywhere, ``decoy_weight`` on and around unlabelled decoys.
 
     Decoys (legitimate cuts, drifts, zooms, objects entering...) look like edits but are not;
@@ -219,7 +246,9 @@ def _tiou(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 
 def local_type_f1(
-    records: list[dict[str, Any]], predictions: list[list[dict[str, Any]]], issue_type: str
+    records: list[dict[str, Any]],
+    predictions: list[list[dict[str, Any]]],
+    issue_type: str,
 ) -> tuple[float, dict[str, int]]:
     """Per-type F1 with greedy confidence-ordered tIoU matching (unweighted by difficulty)."""
     tp = fp = fn = 0
@@ -250,12 +279,20 @@ def local_type_f1(
                 fp += 1
         fn += taken.count(False)
     denominator = 2 * tp + fp + fn
-    return (2 * tp / denominator if denominator else 0.0), {"tp": tp, "fp": fp, "fn": fn}
+    return (2 * tp / denominator if denominator else 0.0), {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+    }
 
 
 def _validator_pieces() -> Any | None:
     try:
-        from validator.modules.video_inconsistency.manifest import ClipSpec, DecoyLabel, IssueLabel
+        from validator.modules.video_inconsistency.manifest import (
+            ClipSpec,
+            DecoyLabel,
+            IssueLabel,
+        )
         from validator.modules.video_inconsistency.predictions import PredictedIssue
         from validator.modules.video_inconsistency.scoring import score_predictions
     except ImportError:
@@ -266,21 +303,33 @@ def _validator_pieces() -> Any | None:
 def to_clip_spec(index: int, record: dict[str, Any]) -> Any:
     ClipSpec, IssueLabel, DecoyLabel, _, _ = _validator_pieces()  # type: ignore[misc]
     return ClipSpec(
-        clip_id=f"c{index}", video_path=record["clip_file"], fps=record["fps"],
-        num_frames=record["num_frames"], width=record["width"], height=record["height"],
-        difficulty=record["difficulty"], issues=[IssueLabel(**i) for i in record["issues"]],
+        clip_id=f"c{index}",
+        video_path=record["clip_file"],
+        fps=record["fps"],
+        num_frames=record["num_frames"],
+        width=record["width"],
+        height=record["height"],
+        difficulty=record["difficulty"],
+        issues=[IssueLabel(**i) for i in record["issues"]],
         decoys=[DecoyLabel(**d) for d in record.get("decoys", []) or []],
     )
 
 
-def _to_predicted(PredictedIssue: Any, issue: dict[str, Any], bbox: list[float] | None = None) -> Any:
+def _to_predicted(
+    PredictedIssue: Any, issue: dict[str, Any], bbox: list[float] | None = None
+) -> Any:
     return PredictedIssue(
-        type=issue["type"], start_time=issue["start_time"], end_time=issue["end_time"],
-        confidence=issue["confidence"], bbox=bbox,
+        type=issue["type"],
+        start_time=issue["start_time"],
+        end_time=issue["end_time"],
+        confidence=issue["confidence"],
+        bbox=bbox,
     )
 
 
-def _localize_job(job: tuple[str, list[tuple[str, int, int]]]) -> list[list[float] | None]:
+def _localize_job(
+    job: tuple[str, list[tuple[str, int, int]]],
+) -> list[list[float] | None]:
     """Decode one clip and box each ``(type, start_frame, end_frame)`` candidate."""
     from vic_localize import localize
 
@@ -304,10 +353,13 @@ def localize_candidates(
         for c, issues in enumerate(per_clip):
             for issue in issues:
                 if issue["type"] in SPATIAL_TYPES:
-                    wanted.setdefault(c, set()).add((issue["type"], issue["_start_frame"], issue["_end_frame"]))
+                    wanted.setdefault(c, set()).add(
+                        (issue["type"], issue["_start_frame"], issue["_end_frame"])
+                    )
     clips = sorted(wanted)
     jobs = [
-        (str(Path(records[c]["_root"]) / records[c]["clip_file"]), sorted(wanted[c])) for c in clips
+        (str(Path(records[c]["_root"]) / records[c]["clip_file"]), sorted(wanted[c]))
+        for c in clips
     ]
     if workers > 1 and len(jobs) > 3:
         with mp.get_context("spawn").Pool(workers) as pool:
@@ -364,7 +416,9 @@ def calibrate_thresholds(
             for threshold in THRESHOLD_GRID:
                 f1, _ = local_type_f1(records, decoded[threshold], name)
                 better = f1 > best_f1 + 1e-9
-                tie = abs(f1 - best_f1) <= 1e-9 and abs(threshold - 0.5) < abs(best_threshold - 0.5)
+                tie = abs(f1 - best_f1) <= 1e-9 and abs(threshold - 0.5) < abs(
+                    best_threshold - 0.5
+                )
                 if better or tie:
                     best_threshold, best_f1 = threshold, f1
         thresholds[name] = float(best_threshold)
@@ -382,7 +436,11 @@ def calibrate_thresholds(
         cache[name] = {
             threshold: [
                 [
-                    _to_predicted(PredictedIssue, i, boxes.get((c, i["type"], i["_start_frame"], i["_end_frame"])))
+                    _to_predicted(
+                        PredictedIssue,
+                        i,
+                        boxes.get((c, i["type"], i["_start_frame"], i["_end_frame"])),
+                    )
                     for i in decoded[threshold][c]
                     if i["type"] == name
                 ]
@@ -417,7 +475,9 @@ def calibrate_thresholds(
     # A single start can get stuck: if two weak types both fire on every clean clip, moving
     # just one of them changes nothing. So also start with all weak types "candidates only".
     weak_off = {name: (1.0 if f1s[name] < 0.3 else t) for name, t in thresholds.items()}
-    best_value, best = max((ascend(thresholds), ascend(weak_off)), key=lambda pair: pair[0])
+    best_value, best = max(
+        (ascend(thresholds), ascend(weak_off)), key=lambda pair: pair[0]
+    )
     return best, f1s
 
 
@@ -433,7 +493,9 @@ def make_batch(
     crops = []
     for features, targets, frame_weights in items:
         length = features.shape[0]
-        crop = int(rng.integers(min(crop_range[0], length), min(crop_range[1], length) + 1))
+        crop = int(
+            rng.integers(min(crop_range[0], length), min(crop_range[1], length) + 1)
+        )
         start = int(rng.integers(0, length - crop + 1))
         sl = slice(start, start + crop)
         crops.append((features[sl], targets[sl], frame_weights[sl]))
@@ -445,7 +507,12 @@ def make_batch(
     for i, (f, t, fw) in enumerate(crops):
         n = len(f)
         x[i, :n], y[i, :n], w[i, :n], mask[i, :n] = f, t, fw, 1.0
-    return torch.from_numpy(x), torch.from_numpy(y), torch.from_numpy(mask), torch.from_numpy(w)
+    return (
+        torch.from_numpy(x),
+        torch.from_numpy(y),
+        torch.from_numpy(mask),
+        torch.from_numpy(w),
+    )
 
 
 def masked_bce(
@@ -483,7 +550,10 @@ def _padded_batches(
 
 @torch.no_grad()
 def predict_logits(
-    model: nn.Module, features: list[np.ndarray], device: torch.device, batch_size: int = 32
+    model: nn.Module,
+    features: list[np.ndarray],
+    device: torch.device,
+    batch_size: int = 32,
 ) -> list[np.ndarray]:
     """Per-clip ``(T, 10)`` logits via padded batches (the mask makes it equal to per-clip runs)."""
     model.eval()
@@ -495,8 +565,13 @@ def predict_logits(
     return out  # type: ignore[return-value]
 
 
-def predict_probs(model: nn.Module, features: list[np.ndarray], device: torch.device) -> list[np.ndarray]:
-    return [1.0 / (1.0 + np.exp(-logits)) for logits in predict_logits(model, features, device)]
+def predict_probs(
+    model: nn.Module, features: list[np.ndarray], device: torch.device
+) -> list[np.ndarray]:
+    return [
+        1.0 / (1.0 + np.exp(-logits))
+        for logits in predict_logits(model, features, device)
+    ]
 
 
 def compute_pos_weight(targets: list[np.ndarray]) -> torch.Tensor:
@@ -520,15 +595,25 @@ def fit(
     rng = np.random.default_rng(args.seed)
     torch.manual_seed(args.seed)
     model = TemporalIssueNet(
-        in_features=train_x[0].shape[1], hidden=args.hidden, dilations=dilations_for_layers(args.layers),
+        in_features=train_x[0].shape[1],
+        hidden=args.hidden,
+        dilations=dilations_for_layers(args.layers),
         dropout=args.dropout,
     ).to(device)
     params = sum(p.numel() for p in model.parameters())
-    print(f"[train] model: hidden {args.hidden}, {args.layers} blocks, {params / 1e3:.0f}k parameters", flush=True)
-    optimiser = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    print(
+        f"[train] model: hidden {args.hidden}, {args.layers} blocks, {params / 1e3:.0f}k parameters",
+        flush=True,
+    )
+    optimiser = torch.optim.AdamW(
+        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+    )
     steps_per_epoch = max(1, int(np.ceil(len(train_x) / args.batch_size)))
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimiser, max_lr=args.lr, total_steps=steps_per_epoch * args.epochs, pct_start=0.1,
+        optimiser,
+        max_lr=args.lr,
+        total_steps=steps_per_epoch * args.epochs,
+        pct_start=0.1,
         anneal_strategy="cos",
     )
     pos_weight = compute_pos_weight(train_y).to(device)
@@ -541,8 +626,10 @@ def fit(
         total, count = 0.0, 0
         for logits, target in zip(logits_list, val_y):
             loss = masked_bce(
-                torch.from_numpy(logits)[None], torch.from_numpy(target)[None],
-                torch.ones(1, logits.shape[0]), pos_weight.cpu(),
+                torch.from_numpy(logits)[None],
+                torch.from_numpy(target)[None],
+                torch.ones(1, logits.shape[0]),
+                pos_weight.cpu(),
             )
             total += float(loss) * logits.shape[0]
             count += logits.shape[0]
@@ -556,11 +643,18 @@ def fit(
         order = rng.permutation(len(train_x))
         running = 0.0
         for begin in range(0, len(order), args.batch_size):
-            batch = [(train_x[i], train_y[i], train_w[i]) for i in order[begin : begin + args.batch_size]]
+            batch = [
+                (train_x[i], train_y[i], train_w[i])
+                for i in order[begin : begin + args.batch_size]
+            ]
             x, y, mask, frame_w = make_batch(batch, (64, 10_000), rng)
-            if args.noise > 0:  # feature-space jitter: cheap regularisation for small datasets
+            if (
+                args.noise > 0
+            ):  # feature-space jitter: cheap regularisation for small datasets
                 x = x + args.noise * torch.randn_like(x) * mask.unsqueeze(-1)
-            x, y, mask, frame_w = (t.to(device, non_blocking=non_blocking) for t in (x, y, mask, frame_w))
+            x, y, mask, frame_w = (
+                t.to(device, non_blocking=non_blocking) for t in (x, y, mask, frame_w)
+            )
             loss = masked_bce(model(x, mask), y, mask, pos_weight, frame_w)
             optimiser.zero_grad(set_to_none=True)
             loss.backward()
@@ -569,7 +663,9 @@ def fit(
             scheduler.step()
             running += float(loss.detach()) * len(batch)
         current = val_loss()
-        history.append({"epoch": epoch, "train_loss": running / len(train_x), "val_loss": current})
+        history.append(
+            {"epoch": epoch, "train_loss": running / len(train_x), "val_loss": current}
+        )
         monitored = current if val_x else running / len(train_x)
         if monitored < best_loss - 1e-4:
             best_loss, best_epoch, stale = monitored, epoch, 0
@@ -577,12 +673,19 @@ def fit(
         else:
             stale += 1
         if epoch == 1 or epoch % 5 == 0 or epoch == args.epochs:
-            print(f"[train] epoch {epoch:3d}  train {running / len(train_x):.4f}  val {current:.4f}", flush=True)
+            print(
+                f"[train] epoch {epoch:3d}  train {running / len(train_x):.4f}  val {current:.4f}",
+                flush=True,
+            )
         if stale >= args.patience:
             print(f"[train] early stop at epoch {epoch} (best epoch {best_epoch})")
             break
     model.load_state_dict(best_state)
-    return model, {"best_epoch": best_epoch, "best_val_loss": best_loss, "history": history}
+    return model, {
+        "best_epoch": best_epoch,
+        "best_val_loss": best_loss,
+        "history": history,
+    }
 
 
 # ---------------------------------------------------------------------------------------
@@ -610,7 +713,9 @@ def score_with_validator(
             if with_boxes and issue["type"] in SPATIAL_TYPES:
                 if frames is None:
                     frames = decode_video(Path(record["_root"]) / record["clip_file"])
-                bbox = localize(issue["type"], frames, issue["_start_frame"], issue["_end_frame"])
+                bbox = localize(
+                    issue["type"], frames, issue["_start_frame"], issue["_end_frame"]
+                )
             converted.append(_to_predicted(PredictedIssue, issue, bbox))
         preds.append(converted)
     return score_predictions(clips, preds)
@@ -619,8 +724,10 @@ def score_with_validator(
 def result_summary(result: Any) -> dict[str, Any]:
     """The headline numbers of a ``ScoreResult`` as plain JSON (mean AP when the scorer has it)."""
     summary: dict[str, Any] = {
-        "score": result.score, "macro_f1": result.macro_f1,
-        "localization": result.localization_score, "clip_accuracy": result.clip_accuracy,
+        "score": result.score,
+        "macro_f1": result.macro_f1,
+        "localization": result.localization_score,
+        "clip_accuracy": result.clip_accuracy,
         "per_type_f1": result.per_type_f1,
     }
     if getattr(result, "mean_ap", None) is not None:
@@ -654,41 +761,83 @@ def _describe(records: list[dict[str, Any]], title: str) -> None:
         difficulty[r["difficulty"]] = difficulty.get(r["difficulty"], 0) + 1
     decoys = sum(len(r.get("decoys", []) or []) for r in records)
     edited = sum(1 for r in records if r["issues"])
-    print(f"[train] {title}: {len(records)} clips ({edited} edited, {decoys} decoys), difficulty {difficulty}")
+    print(
+        f"[train] {title}: {len(records)} clips ({edited} edited, {decoys} decoys), difficulty {difficulty}"
+    )
 
 
 # ---------------------------------------------------------------------------------------
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--data-dir", required=True,
-                        help="generate_data.py output, a Hugging Face split folder, or the dataset root")
-    parser.add_argument("--val-dir", default=None,
-                        help="explicit validation folder (same layouts); default: hold out --val-fraction")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--data-dir",
+        required=True,
+        help="generate_data.py output, a Hugging Face split folder, or the dataset root",
+    )
+    parser.add_argument(
+        "--val-dir",
+        default=None,
+        help="explicit validation folder (same layouts); default: hold out --val-fraction",
+    )
     parser.add_argument("--out-dir", required=True)
-    parser.add_argument("--cache-dir", default=None,
-                        help="feature cache folder (default: <data-dir>/feature_cache)")
+    parser.add_argument(
+        "--cache-dir",
+        default=None,
+        help="feature cache folder (default: <data-dir>/feature_cache)",
+    )
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=2e-3)
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--device", default="cpu", help="cpu | cuda | cuda:N")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--hidden", type=int, default=64, help="channels of the temporal net")
-    parser.add_argument("--layers", type=int, default=6,
-                        help="residual blocks (dilations 1,2,4,..,32 repeating); 6 = 127-frame receptive field")
+    parser.add_argument(
+        "--hidden", type=int, default=64, help="channels of the temporal net"
+    )
+    parser.add_argument(
+        "--layers",
+        type=int,
+        default=6,
+        help="residual blocks (dilations 1,2,4,..,32 repeating); 6 = 127-frame receptive field",
+    )
     parser.add_argument("--dropout", type=float, default=0.2)
-    parser.add_argument("--noise", type=float, default=0.15, help="std of Gaussian jitter on normalised features")
-    parser.add_argument("--decoy-weight", type=float, default=2.0,
-                        help="loss weight of frames on/around unlabelled decoys (hard negatives); 1 disables")
+    parser.add_argument(
+        "--noise",
+        type=float,
+        default=0.15,
+        help="std of Gaussian jitter on normalised features",
+    )
+    parser.add_argument(
+        "--decoy-weight",
+        type=float,
+        default=2.0,
+        help="loss weight of frames on/around unlabelled decoys (hard negatives); 1 disables",
+    )
     parser.add_argument("--weight-decay", type=float, default=5e-2)
-    parser.add_argument("--patience", type=int, default=12, help="early-stopping patience (epochs)")
-    parser.add_argument("--calib-f1-weight", type=float, default=0.1,
-                        help="weight of macro F1 added to the validator score when tuning thresholds "
-                        "(keeps confident detections meaningful); 0 = pure validator score")
-    parser.add_argument("--calib-max-clips", type=int, default=500,
-                        help="validation clips used for threshold calibration (all are used for the report)")
-    parser.add_argument("--workers", type=int, default=max(1, min(4, mp.cpu_count())),
-                        help="processes for decoding + feature extraction")
+    parser.add_argument(
+        "--patience", type=int, default=12, help="early-stopping patience (epochs)"
+    )
+    parser.add_argument(
+        "--calib-f1-weight",
+        type=float,
+        default=0.1,
+        help="weight of macro F1 added to the validator score when tuning thresholds "
+        "(keeps confident detections meaningful); 0 = pure validator score",
+    )
+    parser.add_argument(
+        "--calib-max-clips",
+        type=int,
+        default=500,
+        help="validation clips used for threshold calibration (all are used for the report)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=max(1, min(4, mp.cpu_count())),
+        help="processes for decoding + feature extraction",
+    )
     args = parser.parse_args(argv)
 
     train_dir, val_dir = resolve_splits(Path(args.data_dir), args.val_dir)
@@ -697,8 +846,14 @@ def main(argv: list[str] | None = None) -> int:
     cache_dir = Path(args.cache_dir) if args.cache_dir else train_dir / CACHE_DIRNAME
     torch.set_num_threads(max(1, min(8, mp.cpu_count())))
     if args.device.startswith("cuda") and not torch.cuda.is_available():
-        print("[train] CUDA requested but not available; falling back to CPU", flush=True)
-    device = torch.device(args.device if not args.device.startswith("cuda") or torch.cuda.is_available() else "cpu")
+        print(
+            "[train] CUDA requested but not available; falling back to CPU", flush=True
+        )
+    device = torch.device(
+        args.device
+        if not args.device.startswith("cuda") or torch.cuda.is_available()
+        else "cpu"
+    )
 
     started = time.time()
     train_records = read_labels(train_dir)
@@ -710,7 +865,10 @@ def main(argv: list[str] | None = None) -> int:
     all_records = train_records + val_records_all
     features = load_all_features(cache_dir, all_records, args.workers)
     targets = [build_targets(r, f.shape[0]) for r, f in zip(all_records, features)]
-    weights = [build_frame_weights(r, f.shape[0], args.decoy_weight) for r, f in zip(all_records, features)]
+    weights = [
+        build_frame_weights(r, f.shape[0], args.decoy_weight)
+        for r, f in zip(all_records, features)
+    ]
     print(f"[train] features ready in {time.time() - started:.0f}s", flush=True)
 
     rng = np.random.default_rng(args.seed)
@@ -725,7 +883,9 @@ def main(argv: list[str] | None = None) -> int:
         val_idx, train_idx = order[:num_val], order[num_val:]
     stats = vic_features.compute_feature_stats([features[i] for i in train_idx])
     normed = [vic_features.normalize_features(f, stats) for f in features]
-    train_x, train_y, train_w = ([a[i] for i in train_idx] for a in (normed, targets, weights))
+    train_x, train_y, train_w = (
+        [a[i] for i in train_idx] for a in (normed, targets, weights)
+    )
     val_x, val_y = [normed[i] for i in val_idx], [targets[i] for i in val_idx]
     val_records = [all_records[i] for i in val_idx]
 
@@ -736,9 +896,16 @@ def main(argv: list[str] | None = None) -> int:
     report: dict[str, Any] = {}
     if val_x:
         val_probs = predict_probs(model, val_x, device)
-        print(f"[train] calibrating thresholds on up to {args.calib_max_clips} validation clips...", flush=True)
+        print(
+            f"[train] calibrating thresholds on up to {args.calib_max_clips} validation clips...",
+            flush=True,
+        )
         thresholds, calibrated_f1 = calibrate_thresholds(
-            val_records, val_probs, args.calib_max_clips, args.workers, args.calib_f1_weight
+            val_records,
+            val_probs,
+            args.calib_max_clips,
+            args.workers,
+            args.calib_f1_weight,
         )
         decoded = [
             decode_intervals(p, r["fps"], r["num_frames"] / r["fps"], thresholds)
@@ -749,9 +916,13 @@ def main(argv: list[str] | None = None) -> int:
             print_report("validation (validator scorer, calibrated thresholds)", result)
             report = result_summary(result)
         else:
-            print("\n== validation per-type F1 (local matcher; validator scoring not importable) ==")
+            print(
+                "\n== validation per-type F1 (local matcher; validator scoring not importable) =="
+            )
             for name in ISSUE_TYPE_NAMES:
-                print(f"  {name:18s} F1 {calibrated_f1[name]:.3f}  threshold {thresholds[name]:.2f}")
+                print(
+                    f"  {name:18s} F1 {calibrated_f1[name]:.3f}  threshold {thresholds[name]:.2f}"
+                )
             report = {"per_type_f1": calibrated_f1}
         print("thresholds:", {k: v for k, v in thresholds.items()})
 
@@ -771,15 +942,20 @@ def main(argv: list[str] | None = None) -> int:
         "model": model_hyperparameters(model),
         "fps_assumption": float(np.median(fps_values)),
         "train": {
-            "num_train_clips": int(len(train_idx)), "num_val_clips": int(len(val_idx)),
-            "epochs_run": len(info["history"]), "best_epoch": info["best_epoch"],
-            "seed": args.seed, "decoy_weight": args.decoy_weight,
+            "num_train_clips": int(len(train_idx)),
+            "num_val_clips": int(len(val_idx)),
+            "epochs_run": len(info["history"]),
+            "best_epoch": info["best_epoch"],
+            "seed": args.seed,
+            "decoy_weight": args.decoy_weight,
         },
         "validation": report,
     }
     with open(out_dir / "vic_config.json", "w", encoding="utf-8") as handle:
         json.dump(config, handle, indent=2)
-    print(f"\n[train] saved weights.safetensors + vic_config.json to {out_dir} ({time.time() - started:.0f}s total)")
+    print(
+        f"\n[train] saved weights.safetensors + vic_config.json to {out_dir} ({time.time() - started:.0f}s total)"
+    )
     return 0
 
 

@@ -31,6 +31,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+
 # The scripts in this folder are run from anywhere; make the repo root importable so we can use
 # the validator's synthesiser / video I/O. (The *submission* never imports validator.*.)
 def _find_repo_root(start: Path) -> Path:
@@ -40,7 +41,13 @@ def _find_repo_root(start: Path) -> Path:
     which vendors the needed validator modules at its root.
     """
     for candidate in (start, *start.parents):
-        if (candidate / "validator" / "modules" / "video_inconsistency" / "issue_types.py").is_file():
+        if (
+            candidate
+            / "validator"
+            / "modules"
+            / "video_inconsistency"
+            / "issue_types.py"
+        ).is_file():
             return candidate
     return start.parents[3] if len(start.parents) > 3 else start
 
@@ -110,12 +117,21 @@ def _footage_paths(footage_dir: str | None) -> tuple[str, ...]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--num-clips", type=int, default=300)
-    parser.add_argument("--seed", type=int, default=0, help="run seed; different seeds give disjoint clips")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="run seed; different seeds give disjoint clips",
+    )
     parser.add_argument("--workers", type=int, default=max(1, min(4, mp.cpu_count())))
-    parser.add_argument("--footage-dir", default=None, help="folder of real videos to edit (optional)")
+    parser.add_argument(
+        "--footage-dir", default=None, help="folder of real videos to edit (optional)"
+    )
     parser.add_argument("--footage-fraction", type=float, default=0.0)
     parser.add_argument("--width", type=int, default=320)
     parser.add_argument("--height", type=int, default=240)
@@ -136,7 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out_dir)
     (out_dir / "videos").mkdir(parents=True, exist_ok=True)
     jobs = [
-        (i, clip_seed(args.seed, i), str(out_dir), config_kwargs) for i in range(args.num_clips)
+        (i, clip_seed(args.seed, i), str(out_dir), config_kwargs)
+        for i in range(args.num_clips)
     ]
     started = time.time()
     records: list[dict[str, Any]] = []
@@ -150,7 +167,10 @@ def main(argv: list[str] | None = None) -> int:
         for count, record in enumerate(results, start=1):
             records.append(record)
             if count % 25 == 0 or count == len(jobs):
-                print(f"[generate] {count}/{len(jobs)} clips ({time.time() - started:.0f}s)", flush=True)
+                print(
+                    f"[generate] {count}/{len(jobs)} clips ({time.time() - started:.0f}s)",
+                    flush=True,
+                )
     finally:
         if pool is not None:
             pool.close()
@@ -161,7 +181,9 @@ def main(argv: list[str] | None = None) -> int:
             handle.write(json.dumps(record) + "\n")
     edited = sum(1 for r in records if r["issues"])
     decoys = sum(len(r["decoys"]) for r in records)
-    print(f"[generate] wrote {len(records)} clips ({edited} edited, {decoys} decoys) to {out_dir}")
+    print(
+        f"[generate] wrote {len(records)} clips ({edited} edited, {decoys} decoys) to {out_dir}"
+    )
     return 0
 
 

@@ -48,7 +48,9 @@ class PredictedIssue(BaseModel, frozen=True):
     bbox: list[float] | None = None
 
 
-def _invalid(index: int | None, field: str | None, problem: str) -> VideoSubmissionError:
+def _invalid(
+    index: int | None, field: str | None, problem: str
+) -> VideoSubmissionError:
     if index is None:
         where = "detector output"
     elif field is None:
@@ -98,7 +100,9 @@ def _parse_item(item: Any, index: int, duration: float) -> PredictedIssue:
         raise _invalid(index, "start_time", "is required")
     if "end_time" not in item:
         raise _invalid(index, "end_time", "is required")
-    start = min(max(_finite_number(item["start_time"], index, "start_time"), 0.0), duration)
+    start = min(
+        max(_finite_number(item["start_time"], index, "start_time"), 0.0), duration
+    )
     end = min(max(_finite_number(item["end_time"], index, "end_time"), 0.0), duration)
     if end < start - _TIME_TOLERANCE:
         raise _invalid(index, "end_time", "must be >= start_time")
@@ -118,7 +122,9 @@ def _parse_item(item: Any, index: int, duration: float) -> PredictedIssue:
             raise _invalid(index, "description", "must be a string")
         if len(description) > MAX_DESCRIPTION_CHARS:
             raise _invalid(
-                index, "description", f"must be at most {MAX_DESCRIPTION_CHARS} characters"
+                index,
+                "description",
+                f"must be at most {MAX_DESCRIPTION_CHARS} characters",
             )
 
     return PredictedIssue(
@@ -141,5 +147,7 @@ def parse_detector_output(raw: Any, duration: float) -> list[PredictedIssue]:
     if not isinstance(items, list):
         raise _invalid(None, None, "must be a list of issues or {'issues': [...]}")
     if len(items) > MAX_ISSUES_PER_OUTPUT:
-        raise _invalid(None, None, f"at most {MAX_ISSUES_PER_OUTPUT} issues are allowed")
+        raise _invalid(
+            None, None, f"at most {MAX_ISSUES_PER_OUTPUT} issues are allowed"
+        )
     return [_parse_item(item, index, duration) for index, item in enumerate(items)]
