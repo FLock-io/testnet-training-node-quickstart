@@ -79,11 +79,7 @@ from validator.modules.video_inconsistency.issue_types import (
     ISSUE_TYPE_NAMES,
     SPATIAL_ISSUE_TYPES,
 )
-from validator.modules.video_inconsistency.manifest import (
-    DIFFICULTIES,
-    ClipSpec,
-    IssueLabel,
-)
+from validator.modules.video_inconsistency.manifest import DIFFICULTIES, ClipSpec, IssueLabel
 from validator.modules.video_inconsistency.predictions import PredictedIssue
 
 
@@ -134,9 +130,7 @@ class ScoringSettings:
             raise ValueError("tiou_threshold must be in (0, 1]")
         if not 0.0 < self.bbox_iou_threshold <= 1.0:
             raise ValueError("bbox_iou_threshold must be in (0, 1]")
-        if not (
-            math.isfinite(self.min_event_seconds) and self.min_event_seconds >= 0.0
-        ):
+        if not (math.isfinite(self.min_event_seconds) and self.min_event_seconds >= 0.0):
             raise ValueError("min_event_seconds must be finite and >= 0")
         if not 0.0 <= self.confidence_threshold <= 1.0:
             raise ValueError("confidence_threshold must be in [0, 1]")
@@ -325,15 +319,7 @@ def _balanced_clip_accuracy(
 class _RankedPrediction:
     """A prediction in the pooled per-type ranking, with its precomputed matches."""
 
-    __slots__ = (
-        "confidence",
-        "clip_index",
-        "order",
-        "weight",
-        "pred",
-        "gt_indices",
-        "tious",
-    )
+    __slots__ = ("confidence", "clip_index", "order", "weight", "pred", "gt_indices", "tious")
 
     def __init__(
         self,
@@ -391,14 +377,10 @@ def _ranked_by_type(
     pooled: dict[str, list[_RankedPrediction]] = {name: [] for name in ISSUE_TYPE_NAMES}
     for clip_index, (clip, preds) in enumerate(zip(clips, predictions)):
         duration = clip.duration
-        indexed = sorted(
-            enumerate(preds), key=lambda item: -item[1].confidence
-        )  # stable
+        indexed = sorted(enumerate(preds), key=lambda item: -item[1].confidence)  # stable
         weight = settings.weight_for(clip.difficulty)
         gt_intervals = [
-            _pad_interval(
-                g.start_time, g.end_time, settings.min_event_seconds, duration
-            )
+            _pad_interval(g.start_time, g.end_time, settings.min_event_seconds, duration)
             for g in clip.issues
         ]
         for order, pred in indexed[: settings.max_predictions_per_clip]:
@@ -533,9 +515,7 @@ def score_predictions(
         localization = 1.0
     clip_accuracy = _balanced_clip_accuracy(clips, predictions, settings)
 
-    mean_ap, per_type_ap, ap_by_tiou = _mean_average_precision(
-        clips, predictions, settings
-    )
+    mean_ap, per_type_ap, ap_by_tiou = _mean_average_precision(clips, predictions, settings)
 
     score = (
         settings.weight_map * mean_ap

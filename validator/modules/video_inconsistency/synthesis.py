@@ -66,9 +66,7 @@ CUT_CLEARANCE_SECONDS = 0.5
 _EDIT_RETRIES = 3  # stochastic re-draws of an editor at one window position
 _SLIDE_TRIES = 8  # alternative window positions per edit
 _PLAN_ATTEMPTS = 6  # per rendered source
-_SOURCE_ROUNDS = (
-    4  # fresh scenes tried when no plan fits (e.g. a static scene cannot show a freeze)
-)
+_SOURCE_ROUNDS = 4  # fresh scenes tried when no plan fits (e.g. a static scene cannot show a freeze)
 
 # Mean absolute pixel difference (0-255) between two frames that we consider
 # "real motion" (sensor noise alone gives ~1-4, so this needs real displacement).
@@ -130,12 +128,8 @@ class SynthesisConfig:
         if unknown:
             raise ValueError(f"unknown issue types: {unknown}")
         weights = dict(self.difficulty_weights)
-        if not weights or any(
-            k not in DIFFICULTIES or v < 0 for k, v in weights.items()
-        ):
-            raise ValueError(
-                f"difficulty_weights must map {DIFFICULTIES} to weights >= 0"
-            )
+        if not weights or any(k not in DIFFICULTIES or v < 0 for k, v in weights.items()):
+            raise ValueError(f"difficulty_weights must map {DIFFICULTIES} to weights >= 0")
         if sum(weights.values()) <= 0:
             raise ValueError("difficulty_weights must not all be zero")
         if self.decoy_rate < 0:
@@ -152,17 +146,13 @@ class SyntheticClip:
     issues: list[IssueLabel]  # ground truth in OUTPUT timeline, sorted by start_frame
     difficulty: str  # "easy" | "medium" | "hard" | "expert"
     source: str  # "procedural" | "footage"
-    decoys: list[DecoyLabel] = field(
-        default_factory=list
-    )  # legitimate, unlabelled events
+    decoys: list[DecoyLabel] = field(default_factory=list)  # legitimate, unlabelled events
     crf: int = 18  # per-clip encode quality (pass to ``encode_video``)
 
 
 def _derive_seed(*parts: object) -> int:
     """Stable child seed from a tuple of parts (no dependence on hash randomisation)."""
-    digest = hashlib.sha256(
-        ":".join(str(part) for part in parts).encode("utf-8")
-    ).digest()
+    digest = hashlib.sha256(":".join(str(part) for part in parts).encode("utf-8")).digest()
     return int.from_bytes(digest[:8], "big")
 
 
@@ -189,9 +179,9 @@ def _resize_float(array: np.ndarray, width: int, height: int) -> np.ndarray:
     """Bicubic-resize an (h, w, c) float array via PIL's float mode."""
     channels = [
         np.asarray(
-            Image.fromarray(
-                np.ascontiguousarray(array[..., c], dtype=np.float32)
-            ).resize((width, height), Image.BICUBIC),
+            Image.fromarray(np.ascontiguousarray(array[..., c], dtype=np.float32)).resize(
+                (width, height), Image.BICUBIC
+            ),
             dtype=np.float32,
         )
         for c in range(array.shape[2])
@@ -211,9 +201,7 @@ def _shape_extent(kind: str, hw: float, hh: float) -> tuple[float, float, float,
     return hw, hh, hw, hh
 
 
-def _shape_sdf(
-    kind: str, u: np.ndarray, v: np.ndarray, hw: float, hh: float
-) -> np.ndarray:
+def _shape_sdf(kind: str, u: np.ndarray, v: np.ndarray, hw: float, hh: float) -> np.ndarray:
     """Signed distance (px, negative inside) of a shape in its local frame."""
     if kind == "circle":
         return np.sqrt(u * u + v * v) - hw
@@ -293,9 +281,7 @@ class _MovingObject:
     pos0: np.ndarray
     vel: np.ndarray  # px / s
     radius: float
-    behavior: str = (
-        "bounce"  # "bounce" off the canvas walls | "wrap" (leaves, re-enters)
-    )
+    behavior: str = "bounce"  # "bounce" off the canvas walls | "wrap" (leaves, re-enters)
     pauses: tuple[tuple[float, float], ...] = ()  # short natural pauses, seconds
 
 
@@ -319,14 +305,10 @@ class _SceneHints:
 
 
 # Edits that are only visible when the picture actually moves across their window.
-MOTION_DEPENDENT_ISSUES = frozenset(
-    {"frozen_frames", "dropped_frames", "reversed_segment"}
-)
+MOTION_DEPENDENT_ISSUES = frozenset({"frozen_frames", "dropped_frames", "reversed_segment"})
 
 
-def _scene_hints(
-    names: Sequence[str], difficulty: str, symmetric: bool = False
-) -> _SceneHints:
+def _scene_hints(names: Sequence[str], difficulty: str, symmetric: bool = False) -> _SceneHints:
     """Scene constraints implied by the planned issue types (chosen before rendering)."""
     motion = any(name in MOTION_DEPENDENT_ISSUES for name in names)
     modes: Optional[tuple[str, ...]] = _MOVING_CAMERA_MODES if motion else None
@@ -341,11 +323,7 @@ def _scene_hints(
 def _sample_style(rng: np.random.Generator, symmetric: bool) -> _Style:
     # The look never depends on the planned issues (it would be a learnable shortcut); a
     # dim or low-contrast scene that cannot show an edit is re-rendered by the fallback.
-    look = str(
-        rng.choice(
-            ["normal", "low_contrast", "dim", "muted"], p=[0.5, 0.18, 0.14, 0.18]
-        )
-    )
+    look = str(rng.choice(["normal", "low_contrast", "dim", "muted"], p=[0.5, 0.18, 0.14, 0.18]))
     contrast, brightness, saturation = 1.0, 1.0, 1.0
     if look == "low_contrast":
         contrast, saturation = float(rng.uniform(0.4, 0.65)), 0.75
@@ -359,12 +337,7 @@ def _sample_style(rng: np.random.Generator, symmetric: bool) -> _Style:
         symmetry = float(rng.uniform(0.5, 0.9))
     else:
         symmetry = 0.0
-    return _Style(
-        contrast=contrast,
-        brightness=brightness,
-        saturation=saturation,
-        symmetry=symmetry,
-    )
+    return _Style(contrast=contrast, brightness=brightness, saturation=saturation, symmetry=symmetry)
 
 
 _CAMERA_MODES = ("pan", "handheld", "static", "drift")
@@ -393,11 +366,7 @@ class _SceneSpec:
 
 
 def _make_background(
-    prng: np.random.Generator,
-    lrng: np.random.Generator,
-    cw: int,
-    ch: int,
-    style: _Style,
+    prng: np.random.Generator, lrng: np.random.Generator, cw: int, ch: int, style: _Style
 ) -> np.ndarray:
     """Float32 (ch, cw, 3) background. ``prng`` draws the palette / texture family,
     ``lrng`` the spatial layout, so two scenes sharing ``prng`` look alike but differ in layout."""
@@ -420,12 +389,7 @@ def _make_background(
     mid_amp = float(prng.uniform(10.0, 22.0))
     ground_scale = float(prng.uniform(0.45, 0.75))
     landmark_colors = [
-        (
-            float(prng.random()),
-            float(prng.uniform(0.3, 0.8)) * style.saturation,
-            float(prng.uniform(0.35, 0.9)),
-            float(prng.uniform(0.5, 0.85)),
-        )
+        (float(prng.random()), float(prng.uniform(0.3, 0.8)) * style.saturation, float(prng.uniform(0.35, 0.9)), float(prng.uniform(0.5, 0.85)))
         for _ in range(4)
     ]
 
@@ -434,9 +398,7 @@ def _make_background(
     background = _resize_float(cells + lrng.normal(0.0, 10.0, cells.shape), cw, ch)
 
     # Textures at two scales give real gradients for motion to be visible.
-    fine = lrng.uniform(-1.0, 1.0, (ch // fine_div + 2, cw // fine_div + 2, 3)).astype(
-        np.float32
-    )
+    fine = lrng.uniform(-1.0, 1.0, (ch // fine_div + 2, cw // fine_div + 2, 3)).astype(np.float32)
     fine_full = _resize_float(fine, cw, ch)
     background += fine_amp * fine_full
     mid = lrng.uniform(-1.0, 1.0, (ch // 20 + 2, cw // 20 + 2, 3)).astype(np.float32)
@@ -444,9 +406,7 @@ def _make_background(
 
     yy, xx = np.mgrid[0:ch, 0:cw].astype(np.float32)
     theta = float(lrng.uniform(0.0, 2.0 * math.pi))
-    ramp = ((xx - cw / 2) * math.cos(theta) + (yy - ch / 2) * math.sin(theta)) / max(
-        cw, ch
-    )
+    ramp = ((xx - cw / 2) * math.cos(theta) + (yy - ch / 2) * math.sin(theta)) / max(cw, ch)
     background += ramp[..., None] * lrng.uniform(-45.0, 45.0, 3).astype(np.float32)
 
     # Tilted horizon with a striped ground band underneath: breaks mirror symmetry.
@@ -455,12 +415,8 @@ def _make_background(
     horizon = horizon0 + slope * (xx - cw / 2)
     ground_mask = np.clip((yy - horizon) / 2.0 + 0.5, 0.0, 1.0)[..., None]
     ground_base = palette[int(lrng.integers(0, len(palette)))] * ground_scale
-    stripes = 0.85 + 0.15 * np.sin(
-        (yy - horizon) * float(lrng.uniform(0.12, 0.35)) + float(lrng.uniform(0, 6))
-    )
-    ground = (
-        ground_base[None, None, :] * stripes[..., None] + 0.6 * fine_amp * fine_full
-    )
+    stripes = 0.85 + 0.15 * np.sin((yy - horizon) * float(lrng.uniform(0.12, 0.35)) + float(lrng.uniform(0, 6)))
+    ground = ground_base[None, None, :] * stripes[..., None] + 0.6 * fine_amp * fine_full
     background = background * (1.0 - ground_mask) + ground * ground_mask
 
     # Static landmarks: a tall block on one side, a triangle on the other, a ring and a disc.
@@ -530,24 +486,14 @@ _OBJECT_KINDS = ("circle", "rect", "triangle", "ring", "ellipse")
 
 
 def _new_object(
-    rng: np.random.Generator,
-    cw: int,
-    ch: int,
-    speed_range: tuple[float, float],
-    behavior: str,
+    rng: np.random.Generator, cw: int, ch: int, speed_range: tuple[float, float], behavior: str
 ) -> _MovingObject:
     kind = str(_OBJECT_KINDS[int(rng.integers(0, len(_OBJECT_KINDS)))])
     hw = float(rng.uniform(0.032, 0.075)) * min(cw, ch)
     hh = hw * (float(rng.uniform(0.5, 1.2)) if kind in ("rect", "ellipse") else 1.0)
     radius = math.hypot(hw, hh) * (_TRI_R if kind == "triangle" else 1.0)
-    color_a = _hsv(
-        float(rng.random()),
-        float(rng.uniform(0.45, 1.0)),
-        float(rng.uniform(0.55, 1.0)),
-    )
-    color_b = _hsv(
-        float(rng.random()), float(rng.uniform(0.35, 0.9)), float(rng.uniform(0.3, 0.8))
-    )
+    color_a = _hsv(float(rng.random()), float(rng.uniform(0.45, 1.0)), float(rng.uniform(0.55, 1.0)))
+    color_b = _hsv(float(rng.random()), float(rng.uniform(0.35, 0.9)), float(rng.uniform(0.3, 0.8)))
     speed = float(rng.uniform(*speed_range))
     heading = float(rng.uniform(0.0, 2.0 * math.pi))
     return _MovingObject(
@@ -561,10 +507,7 @@ def _new_object(
         angle0=float(rng.uniform(0.0, 2.0 * math.pi)),
         omega=float(rng.uniform(-2.5, 2.5)) if rng.random() < 0.55 else 0.0,
         pos0=np.array(
-            [
-                rng.uniform(radius + 2, cw - radius - 2),
-                rng.uniform(radius + 2, ch - radius - 2),
-            ]
+            [rng.uniform(radius + 2, cw - radius - 2), rng.uniform(radius + 2, ch - radius - 2)]
         ),
         vel=np.array([math.cos(heading), math.sin(heading)]) * speed,
         radius=radius,
@@ -575,9 +518,7 @@ def _new_object(
 def _make_moving_objects(
     rng: np.random.Generator, cw: int, ch: int, camera_mode: str, fast: bool = False
 ) -> list[_MovingObject]:
-    count = (
-        int(rng.integers(4, 10)) if camera_mode == "static" else int(rng.integers(3, 8))
-    )
+    count = int(rng.integers(4, 10)) if camera_mode == "static" else int(rng.integers(3, 8))
     objects: list[_MovingObject] = []
     for _ in range(count):
         # A mix of slow and fast movers; ~40 % wander off the canvas and come back
@@ -586,9 +527,7 @@ def _make_moving_objects(
         behavior = "wrap" if rng.random() < 0.4 else "bounce"
         obj = _new_object(rng, cw, ch, (6.0, 28.0) if slow else (30.0, 120.0), behavior)
         pauses: list[tuple[float, float]] = []
-        if (
-            rng.random() < 0.35 and not fast
-        ):  # pause, then resume (short: longer stops are labelled decoys)
+        if rng.random() < 0.35 and not fast:  # pause, then resume (short: longer stops are labelled decoys)
             for _ in range(int(rng.integers(1, 3))):
                 t0 = float(rng.uniform(0.5, 30.0))
                 pauses.append((t0, t0 + float(rng.uniform(0.2, 0.45))))
@@ -617,16 +556,10 @@ def _sample_scene(
     jitter_seed = int(rng.integers(0, 2**62))
     style = _sample_style(rng, symmetric)
     modes = list(camera_modes) if camera_modes is not None else list(_CAMERA_MODES)
-    weights = np.array(
-        [_CAMERA_WEIGHTS[_CAMERA_MODES.index(m)] for m in modes], dtype=float
-    )
+    weights = np.array([_CAMERA_WEIGHTS[_CAMERA_MODES.index(m)] for m in modes], dtype=float)
     camera_mode = str(modes[int(rng.choice(len(modes), p=weights / weights.sum()))])
     if like is not None:
-        palette_seed, style, camera_mode = (
-            like.palette_seed,
-            like.style,
-            like.camera_mode,
-        )
+        palette_seed, style, camera_mode = like.palette_seed, like.style, like.camera_mode
 
     margin_x, margin_y = (cw - width) / 2.0, (ch - height) / 2.0
     amp_x = float(rng.uniform(0.45, 0.8)) * margin_x
@@ -651,9 +584,7 @@ def _sample_scene(
     if camera_mode == "handheld":
         scale = float(rng.uniform(0.3, 0.6))
         cam["ax"], cam["ay"] = amp_x * scale, amp_y * scale
-        cam["jitter"] = float(
-            rng.uniform(0.7, 1.3)
-        )  # AR(1) innovation std, px per frame
+        cam["jitter"] = float(rng.uniform(0.7, 1.3))  # AR(1) innovation std, px per frame
     elif camera_mode == "static":
         cam["ax"] = cam["ay"] = 0.0
         cam["zoom_amp"] = 0.0
@@ -671,20 +602,10 @@ def _sample_scene(
     )
     objects = _make_moving_objects(rng, cw, ch, camera_mode, fast_objects)
     return _SceneSpec(
-        width=width,
-        height=height,
-        fps=fps,
-        cw=cw,
-        ch=ch,
-        palette_seed=palette_seed,
-        layout_seed=layout_seed,
-        noise_seed=noise_seed,
-        jitter_seed=jitter_seed,
-        style=style,
-        camera_mode=camera_mode,
-        cam=cam,
-        objects=objects,
-        light=light,
+        width=width, height=height, fps=fps, cw=cw, ch=ch,
+        palette_seed=palette_seed, layout_seed=layout_seed, noise_seed=noise_seed,
+        jitter_seed=jitter_seed, style=style, camera_mode=camera_mode, cam=cam,
+        objects=objects, light=light,
     )
 
 
@@ -739,9 +660,7 @@ def _object_tracks(
 
 
 def _camera_arrays(
-    spec: _SceneSpec,
-    num_frames: int,
-    events: Sequence[tuple[str, int, int, float]] = (),
+    spec: _SceneSpec, num_frames: int, events: Sequence[tuple[str, int, int, float]] = ()
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Per-frame camera centre (canvas px) and zoom.
 
@@ -771,23 +690,13 @@ def _camera_arrays(
             speed = speed * envelope
         else:
             progress = _smoothstep((index - start + 1) / max(end - start, 1))
-            speed = speed * (
-                1.0 - 2.0 * progress
-                if kind == "camera_direction_change"
-                else 1.0 + (factor - 1.0) * progress
-            )
+            speed = speed * (1.0 - 2.0 * progress if kind == "camera_direction_change" else 1.0 + (factor - 1.0) * progress)
     tau = np.concatenate([[0.0], np.cumsum(speed[:-1])]) / fps
     two_pi = 2.0 * math.pi
-    center_x = spec.cw / 2 + 0.75 * cam["ax"] * np.sin(
-        two_pi * cam["fx"] * tau + cam["px"]
-    )
-    center_x = center_x + 0.25 * cam["ax"] * np.sin(
-        two_pi * cam["fx2"] * tau + cam["px2"]
-    )
+    center_x = spec.cw / 2 + 0.75 * cam["ax"] * np.sin(two_pi * cam["fx"] * tau + cam["px"])
+    center_x = center_x + 0.25 * cam["ax"] * np.sin(two_pi * cam["fx2"] * tau + cam["px2"])
     center_y = spec.ch / 2 + cam["ay"] * np.sin(two_pi * cam["fy"] * tau + cam["py"])
-    zoom = 1.0 + cam["zoom_amp"] * (
-        0.5 + 0.5 * np.sin(two_pi * cam["zoom_freq"] * tau + cam["zoom_phase"])
-    )
+    zoom = 1.0 + cam["zoom_amp"] * (0.5 + 0.5 * np.sin(two_pi * cam["zoom_freq"] * tau + cam["zoom_phase"]))
     if cam["jitter"] > 0.0:
         # Handheld shake: a low-frequency AR(1) random walk (a few px), a small wobble and
         # a +-1 % scale jitter. Drawn frame by frame so a longer render keeps the same prefix.
@@ -799,10 +708,7 @@ def _camera_arrays(
             state[:2] = 0.92 * state[:2] + cam["jitter"] * noise[:2]
             state[2] = 0.97 * state[2] + 0.0015 * noise[2]
             jitter[frame] = state
-        wobble = 0.6 * np.sin(
-            two_pi * cam["wobble_freq"] * np.arange(num_frames) / fps
-            + cam["wobble_phase"]
-        )
+        wobble = 0.6 * np.sin(two_pi * cam["wobble_freq"] * np.arange(num_frames) / fps + cam["wobble_phase"])
         shake = np.minimum(np.abs(speed), 1.0)
         center_x = center_x + (jitter[:, 0] + wobble) * shake
         center_y = center_y + (jitter[:, 1] - 0.7 * wobble) * shake
@@ -810,32 +716,24 @@ def _camera_arrays(
     return center_x, center_y, zoom
 
 
-def _view_rects(
-    spec: _SceneSpec, center_x: np.ndarray, center_y: np.ndarray, zoom: np.ndarray
-) -> np.ndarray:
+def _view_rects(spec: _SceneSpec, center_x: np.ndarray, center_y: np.ndarray, zoom: np.ndarray) -> np.ndarray:
     crop_w, crop_h = spec.width / zoom, spec.height / zoom
     bx0 = np.minimum(np.maximum(center_x - crop_w / 2, 0.0), spec.cw - crop_w)
     by0 = np.minimum(np.maximum(center_y - crop_h / 2, 0.0), spec.ch - crop_h)
     return np.stack([bx0, by0, bx0 + crop_w, by0 + crop_h], axis=1)
 
 
-def _visibility(
-    track: np.ndarray, radius: float, rects: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def _visibility(track: np.ndarray, radius: float, rects: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Per-frame (any part visible, fully visible) flags of a circle-bounded object."""
     x, y = track[:, 0], track[:, 1]
     reach = 0.85 * radius
     seen = (
-        (x + reach > rects[:, 0])
-        & (x - reach < rects[:, 2])
-        & (y + reach > rects[:, 1])
-        & (y - reach < rects[:, 3])
+        (x + reach > rects[:, 0]) & (x - reach < rects[:, 2])
+        & (y + reach > rects[:, 1]) & (y - reach < rects[:, 3])
     )
     full = (
-        (x - radius >= rects[:, 0])
-        & (x + radius <= rects[:, 2])
-        & (y - radius >= rects[:, 1])
-        & (y + radius <= rects[:, 3])
+        (x - radius >= rects[:, 0]) & (x + radius <= rects[:, 2])
+        & (y - radius >= rects[:, 1]) & (y + radius <= rects[:, 3])
     )
     return seen, full
 
@@ -871,12 +769,7 @@ def _realize_transit(
             inward = np.array([0.0, 1.0 if edge == 2 else -1.0])
         angle = float(rng.uniform(-0.35, 0.35))
         cos_a, sin_a = math.cos(angle), math.sin(angle)
-        heading = np.array(
-            [
-                inward[0] * cos_a - inward[1] * sin_a,
-                inward[0] * sin_a + inward[1] * cos_a,
-            ]
-        )
+        heading = np.array([inward[0] * cos_a - inward[1] * sin_a, inward[0] * sin_a + inward[1] * cos_a])
         step = heading * speed * (1.0 if direction == "enter" else -1.0)
         index = np.arange(num_frames, dtype=np.float64)[:, None]
         track = np.array([x, y])[None, :] + step[None, :] * (index - frame)
@@ -898,25 +791,17 @@ def _realize_transit(
         if last > num_frames - 3 or len(left_full) == 0 or abs(last - frame) > 8:
             continue
         settled = int(left_full[-1])
-        if (
-            settled < 6
-            or not 2 <= last - settled <= 25
-            or not full[settled - 6 : settled + 1].all()
-        ):
+        if settled < 6 or not 2 <= last - settled <= 25 or not full[settled - 6 : settled + 1].all():
             continue
         return obj, track, settled + 1, last + 1
     return None
 
 
-def _style_colors(
-    obj: _MovingObject, style: _Style, bg_mean: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def _style_colors(obj: _MovingObject, style: _Style, bg_mean: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Objects follow the scene look: low-contrast scenes get less contrasty objects."""
     strength = 0.5 + 0.5 * style.contrast
-
     def adjust(color: np.ndarray) -> np.ndarray:
         return (bg_mean + (color - bg_mean) * strength) * style.brightness
-
     return adjust(obj.color_a), adjust(obj.color_b)
 
 
@@ -933,11 +818,7 @@ def _render_scene(
     """
     width, height, fps, cw, ch = spec.width, spec.height, spec.fps, spec.cw, spec.ch
     background = _make_background(
-        np.random.default_rng(spec.palette_seed),
-        np.random.default_rng(spec.layout_seed),
-        cw,
-        ch,
-        spec.style,
+        np.random.default_rng(spec.palette_seed), np.random.default_rng(spec.layout_seed), cw, ch, spec.style
     )
     bg_mean = background.mean(axis=(0, 1))
     background_u8 = np.clip(background, 0, 255).astype(np.uint8)
@@ -956,14 +837,10 @@ def _render_scene(
                 # A reversal / speed change is only visible while the camera is really panning:
                 # pick the fastest nearby start (the pan is sinusoidal, so it slows at its turns).
                 span = end - start
-                options = list(
-                    range(max(start - 20, 2), min(start + 21, num_frames - span - 2))
-                )
+                options = list(range(max(start - 20, 2), min(start + 21, num_frames - span - 2)))
                 if not options:
                     continue
-                start = max(
-                    options, key=lambda t: float(pan_speed[t : t + span].mean())
-                )
+                start = max(options, key=lambda t: float(pan_speed[t : t + span].mean()))
                 if float(pan_speed[start : start + span].mean()) < 0.006 * width:
                     continue
                 end = start + span
@@ -984,19 +861,12 @@ def _render_scene(
     for kind, start, end in events:
         if kind != "object_stops":
             continue
-        order = [
-            i
-            for i in erng.permutation(len(objects))
-            if float(np.hypot(*objects[i].vel)) >= 35.0 and i not in stops
-        ]
+        order = [i for i in erng.permutation(len(objects)) if float(np.hypot(*objects[i].vel)) >= 35.0 and i not in stops]
         for index in order[:6]:
             centre = tracks[min(start, num_frames - 1), index]
             rect = rects[min(start, num_frames - 1)]
             r = objects[index].radius
-            if not (
-                rect[0] + r < centre[0] < rect[2] - r
-                and rect[1] + r < centre[1] < rect[3] - r
-            ):
+            if not (rect[0] + r < centre[0] < rect[2] - r and rect[1] + r < centre[1] < rect[3] - r):
                 continue
             stops[int(index)] = (start, end)
             realized.append(("object_stops", start, end))
@@ -1009,31 +879,16 @@ def _render_scene(
     for kind, start, _end in events:
         if kind not in ("object_enters", "object_exits"):
             continue
-        found = _realize_transit(
-            erng,
-            spec,
-            rects,
-            num_frames,
-            "enter" if kind == "object_enters" else "exit",
-            start,
-        )
+        found = _realize_transit(erng, spec, rects, num_frames, "enter" if kind == "object_enters" else "exit", start)
         if found is not None:
             obj, track, first, last = found
             extra_objects.append(obj)
             extra_tracks.append(track)
             realized.append((kind, first, last))
     draw_objects = objects + extra_objects
-    draw_tracks = (
-        np.concatenate([tracks] + [t[:, None, :] for t in extra_tracks], axis=1)
-        if extra_tracks
-        else tracks
-    )
+    draw_tracks = np.concatenate([tracks] + [t[:, None, :] for t in extra_tracks], axis=1) if extra_tracks else tracks
     draw_clocks = (
-        np.concatenate(
-            [clocks]
-            + [np.arange(num_frames, dtype=np.float64)[:, None]] * len(extra_tracks),
-            axis=1,
-        )
+        np.concatenate([clocks] + [np.arange(num_frames, dtype=np.float64)[:, None]] * len(extra_tracks), axis=1)
         if extra_tracks
         else clocks
     )
@@ -1077,12 +932,8 @@ def _render_scene(
             Image.BILINEAR,
             box=(bx0 - rx0, by0 - ry0, bx0 - rx0 + crop_w, by0 - ry0 + crop_h),
         )
-        gain = (
-            1.0 + light_amp * math.sin(2 * math.pi * light_freq * t + light_phase)
-        ) * light_tint
-        noise = noise_rng.integers(
-            -1, 2, size=(height, width, 3), dtype=np.int8
-        )  # sigma ~ 0.8
+        gain = (1.0 + light_amp * math.sin(2 * math.pi * light_freq * t + light_phase)) * light_tint
+        noise = noise_rng.integers(-1, 2, size=(height, width, 3), dtype=np.int8)  # sigma ~ 0.8
         frame = np.asarray(window, dtype=np.float32) * gain + noise
         frames[index] = np.clip(frame, 0, 255).astype(np.uint8)
     return frames, realized
@@ -1107,9 +958,7 @@ def render_procedural_scene(
 # ---------------------------------------------------------------------------
 
 
-def _load_footage_frames(
-    path: str, config: SynthesisConfig, num_frames: int
-) -> np.ndarray | None:
+def _load_footage_frames(path: str, config: SynthesisConfig, num_frames: int) -> np.ndarray | None:
     """Decode, fps-resample (by index), centre-crop and resize footage; None if unusable."""
     try:
         _width, _height, src_fps = probe_stream(path)
@@ -1121,8 +970,7 @@ def _load_footage_frames(
     if raw.shape[0] < needed:
         return None
     indices = np.minimum(
-        np.floor(np.arange(num_frames) * src_fps / config.fps).astype(np.int64),
-        raw.shape[0] - 1,
+        np.floor(np.arange(num_frames) * src_fps / config.fps).astype(np.int64), raw.shape[0] - 1
     )
     src_h, src_w = raw.shape[1:3]
     target_aspect = config.width / config.height
@@ -1137,9 +985,7 @@ def _load_footage_frames(
         key = int(src_index)
         if key not in cache:
             crop = Image.fromarray(raw[key, y0 : y0 + crop_h, x0 : x0 + crop_w])
-            cache[key] = np.asarray(
-                crop.resize((config.width, config.height), Image.BICUBIC)
-            )
+            cache[key] = np.asarray(crop.resize((config.width, config.height), Image.BICUBIC))
         out[out_index] = cache[key]
     return out
 
@@ -1164,9 +1010,7 @@ class _Degradation:
         return self.blur_sigma > 0.0 or self.unsharp > 0 or self.scale < 0.98
 
 
-def _sample_degradation(
-    seed: int, config: SynthesisConfig
-) -> tuple[Optional[_Degradation], int]:
+def _sample_degradation(seed: int, config: SynthesisConfig) -> tuple[Optional[_Degradation], int]:
     """Per-clip degradation parameters and encode crf (None / 18 when disabled)."""
     if not config.degradation:
         return None, 18
@@ -1181,28 +1025,19 @@ def _sample_degradation(
     scale = float(rng.uniform(0.6, 1.0)) if rng.random() < 0.4 else 1.0
     low, high = config.crf_range
     crf = int(rng.integers(low, high + 1))
-    return _Degradation(
-        sigma, blur_sigma, unsharp, scale, int(rng.integers(0, 2**62))
-    ), crf
+    return _Degradation(sigma, blur_sigma, unsharp, scale, int(rng.integers(0, 2**62))), crf
 
 
 def _degrade_frame_det(frame: np.ndarray, deg: _Degradation) -> np.ndarray:
     image = Image.fromarray(frame)
     if deg.scale < 0.98:
         width, height = image.size
-        small = (
-            max(16, int(round(width * deg.scale))),
-            max(16, int(round(height * deg.scale))),
-        )
-        image = image.resize(small, Image.LANCZOS).resize(
-            (width, height), Image.BICUBIC
-        )
+        small = (max(16, int(round(width * deg.scale))), max(16, int(round(height * deg.scale))))
+        image = image.resize(small, Image.LANCZOS).resize((width, height), Image.BICUBIC)
     if deg.blur_sigma > 0.0:
         image = image.filter(ImageFilter.GaussianBlur(deg.blur_sigma))
     elif deg.unsharp > 0:
-        image = image.filter(
-            ImageFilter.UnsharpMask(radius=1.5, percent=deg.unsharp, threshold=2)
-        )
+        image = image.filter(ImageFilter.UnsharpMask(radius=1.5, percent=deg.unsharp, threshold=2))
     return np.asarray(image)
 
 
@@ -1222,17 +1057,9 @@ def _degrade(frames: np.ndarray, deg: Optional[_Degradation]) -> np.ndarray:
     rng = np.random.default_rng(deg.seed)
     out = np.empty_like(frames)
     for index in range(len(frames)):
-        frame = (
-            _degrade_frame_det(frames[index], deg)
-            if deg.has_deterministic_part
-            else frames[index]
-        )
-        noise = rng.standard_normal(frame.shape, dtype=np.float32) * np.float32(
-            deg.sigma
-        )
-        out[index] = np.clip(np.rint(frame.astype(np.float32) + noise), 0, 255).astype(
-            np.uint8
-        )
+        frame = _degrade_frame_det(frames[index], deg) if deg.has_deterministic_part else frames[index]
+        noise = rng.standard_normal(frame.shape, dtype=np.float32) * np.float32(deg.sigma)
+        out[index] = np.clip(np.rint(frame.astype(np.float32) + noise), 0, 255).astype(np.uint8)
     return out
 
 
@@ -1240,26 +1067,13 @@ def _degrade(frames: np.ndarray, deg: Optional[_Degradation]) -> np.ndarray:
 # Decoys: legitimate, unlabelled events
 # ---------------------------------------------------------------------------
 
-_CAMERA_DECOYS = frozenset(
-    {"camera_stops", "camera_direction_change", "camera_speed_change"}
-)
-_SHOT_LEVEL_DECOYS = (
-    frozenset({"object_stops", "object_enters", "object_exits"}) | _CAMERA_DECOYS
-)
+_CAMERA_DECOYS = frozenset({"camera_stops", "camera_direction_change", "camera_speed_change"})
+_SHOT_LEVEL_DECOYS = frozenset({"object_stops", "object_enters", "object_exits"}) | _CAMERA_DECOYS
 _GLOBAL_DECOYS = frozenset(
-    {
-        "exposure_drift",
-        "white_balance_drift",
-        "smooth_zoom",
-        "illumination_flicker",
-        "auto_exposure_step",
-        "auto_white_balance_step",
-        "fast_zoom",
-    }
+    {"exposure_drift", "white_balance_drift", "smooth_zoom", "illumination_flicker",
+     "auto_exposure_step", "auto_white_balance_step", "fast_zoom"}
 )
-_ZOOM_DECOYS = frozenset(
-    {"smooth_zoom", "fast_zoom"}
-)  # both persist: at most one per clip
+_ZOOM_DECOYS = frozenset({"smooth_zoom", "fast_zoom"})  # both persist: at most one per clip
 _DECOY_SECONDS: dict[str, tuple[float, float]] = {
     "exposure_drift": (1.0, 3.0),
     "white_balance_drift": (1.5, 3.5),
@@ -1273,10 +1087,7 @@ _DECOY_SECONDS: dict[str, tuple[float, float]] = {
     "camera_direction_change": (0.3, 0.6),
     "camera_speed_change": (0.2, 0.4),
 }
-_DECOY_STEP_FRAMES = (
-    5,
-    10,
-)  # auto exposure / white-balance steps ease over 5-10 frames
+_DECOY_STEP_FRAMES = (5, 10)  # auto exposure / white-balance steps ease over 5-10 frames
 
 # Decoy -> {edit type: clearance in seconds}. A decoy must never make a labelled edit
 # ambiguous, so the edit windows keep this distance from the decoy's transition. The scene
@@ -1286,16 +1097,8 @@ _DECOY_EDIT_CLEARANCE: dict[str, dict[str, float]] = {
     "auto_exposure_step": {"exposure_flicker": 0.5, "color_grade_jump": 0.3},
     "auto_white_balance_step": {"color_grade_jump": 0.3},
     "fast_zoom": {"zoom_jump": 0.3},
-    "camera_direction_change": {
-        "reversed_segment": 0.5,
-        "dropped_frames": 0.3,
-        "frozen_frames": 0.3,
-    },
-    "camera_speed_change": {
-        "dropped_frames": 0.5,
-        "frozen_frames": 0.3,
-        "reversed_segment": 0.3,
-    },
+    "camera_direction_change": {"reversed_segment": 0.5, "dropped_frames": 0.3, "frozen_frames": 0.3},
+    "camera_speed_change": {"dropped_frames": 0.5, "frozen_frames": 0.3, "reversed_segment": 0.3},
 }
 
 
@@ -1308,11 +1111,7 @@ class _DecoyPlan:
 
 
 def _choose_decoy_types(
-    rng: np.random.Generator,
-    config: SynthesisConfig,
-    num_out: int,
-    footage: bool,
-    cut_available: bool,
+    rng: np.random.Generator, config: SynthesisConfig, num_out: int, footage: bool, cut_available: bool
 ) -> list[str]:
     pool = [t for t in DECOY_TYPES if not (footage and t in _SHOT_LEVEL_DECOYS)]
     if not cut_available:
@@ -1348,11 +1147,7 @@ def _place_decoys(
             plans.append(_DecoyPlan("scene_cut", cut, cut))
     margin = int(math.ceil(0.3 * fps))
     shot_margin = int(math.ceil(0.5 * fps))
-    regions = (
-        [(0, 0, num_out)]
-        if cut is None
-        else [(0, 0, cut - shot_margin), (1, cut + shot_margin, num_out)]
-    )
+    regions = [(0, 0, num_out)] if cut is None else [(0, 0, cut - shot_margin), (1, cut + shot_margin, num_out)]
     for decoy in types:
         if decoy == "scene_cut":
             continue
@@ -1369,8 +1164,7 @@ def _place_decoys(
                 fits = [
                     (shot, r0, r1)
                     for shot, r0, r1 in regions
-                    if r1 - r0 >= duration + 2 * margin
-                    and (decoy not in _CAMERA_DECOYS or moving_camera(shot))
+                    if r1 - r0 >= duration + 2 * margin and (decoy not in _CAMERA_DECOYS or moving_camera(shot))
                 ]
                 if not fits:
                     break
@@ -1383,10 +1177,7 @@ def _place_decoys(
                     break
                 start = int(rng.integers(margin, num_out - margin - duration + 1))
             group = _CAMERA_DECOYS if decoy in _CAMERA_DECOYS else {decoy}
-            if any(
-                p.type in group and p.start < start + duration and start < p.end
-                for p in plans
-            ):
+            if any(p.type in group and p.start < start + duration and start < p.end for p in plans):
                 continue
             plans.append(_DecoyPlan(decoy, start, start + duration, shot))
             break
@@ -1401,9 +1192,7 @@ def _ramp_profile(num_frames: int, start: int, end: int, shape: str) -> np.ndarr
     return _smoothstep(u)
 
 
-def _apply_gain_decoy(
-    frames: np.ndarray, profile: np.ndarray, gain: np.ndarray
-) -> None:
+def _apply_gain_decoy(frames: np.ndarray, profile: np.ndarray, gain: np.ndarray) -> None:
     """In place: multiply frame ``t`` by ``1 + profile[t] * gain`` (gain is per channel)."""
     active = np.nonzero(np.abs(profile) > 1e-3)[0]
     for lo in range(0, len(active), 24):
@@ -1413,9 +1202,7 @@ def _apply_gain_decoy(
         frames[chunk] = np.clip(np.rint(block), 0, 255).astype(np.uint8)
 
 
-def _apply_zoom_decoy(
-    frames: np.ndarray, zoom: np.ndarray, center: tuple[float, float]
-) -> None:
+def _apply_zoom_decoy(frames: np.ndarray, zoom: np.ndarray, center: tuple[float, float]) -> None:
     """In place: continuous digital zoom about ``center`` (fractions of the frame)."""
     height, width = frames.shape[1:3]
     for index in np.nonzero(zoom > 1.0005)[0]:
@@ -1429,9 +1216,7 @@ def _apply_zoom_decoy(
         )
 
 
-def _apply_global_decoys(
-    frames: np.ndarray, plans: Sequence[_DecoyPlan], seed: int, fps: float
-) -> None:
+def _apply_global_decoys(frames: np.ndarray, plans: Sequence[_DecoyPlan], seed: int, fps: float) -> None:
     """Exposure / white-balance drift and smooth zoom, applied to the whole source in place."""
     for index, plan in enumerate(plans):
         if plan.type not in _GLOBAL_DECOYS:
@@ -1445,38 +1230,21 @@ def _apply_global_decoys(
             freq = float(prng.uniform(0.5, 3.0))
             t = np.arange(len(frames))
             fade = int(math.ceil(0.3 * fps))
-            envelope = _smoothstep((t - plan.start) / fade) * _smoothstep(
-                (plan.end - 1 - t) / fade
-            )
-            wave = np.sin(
-                2.0 * math.pi * freq * (t - plan.start) / fps
-                + float(prng.uniform(0, 6.28))
-            )
+            envelope = _smoothstep((t - plan.start) / fade) * _smoothstep((plan.end - 1 - t) / fade)
+            wave = np.sin(2.0 * math.pi * freq * (t - plan.start) / fps + float(prng.uniform(0, 6.28)))
             _apply_gain_decoy(frames, envelope * wave, np.full(3, amplitude))
         elif plan.type == "auto_exposure_step":
             # The camera's auto exposure settles: a persistent, eased brightness step.
             step = float(prng.uniform(0.05, 0.15)) * float(prng.choice([-1.0, 1.0]))
-            _apply_gain_decoy(
-                frames,
-                _ramp_profile(len(frames), plan.start, plan.end, "ramp"),
-                np.full(3, step),
-            )
+            _apply_gain_decoy(frames, _ramp_profile(len(frames), plan.start, plan.end, "ramp"), np.full(3, step))
         elif plan.type == "auto_white_balance_step":
             step = float(prng.uniform(0.04, 0.12)) * float(prng.choice([-1.0, 1.0]))
             gain = step * np.array([1.0, float(prng.uniform(-0.2, 0.2)), -1.0])
-            _apply_gain_decoy(
-                frames, _ramp_profile(len(frames), plan.start, plan.end, "ramp"), gain
-            )
+            _apply_gain_decoy(frames, _ramp_profile(len(frames), plan.start, plan.end, "ramp"), gain)
         elif plan.type == "fast_zoom":
             top = float(prng.uniform(1.1, 1.3))
             center = (float(prng.uniform(0.35, 0.65)), float(prng.uniform(0.35, 0.65)))
-            _apply_zoom_decoy(
-                frames,
-                1.0
-                + (top - 1.0)
-                * _ramp_profile(len(frames), plan.start, plan.end, "ramp"),
-                center,
-            )
+            _apply_zoom_decoy(frames, 1.0 + (top - 1.0) * _ramp_profile(len(frames), plan.start, plan.end, "ramp"), center)
         elif plan.type == "exposure_drift":
             delta = float(prng.uniform(0.08, 0.25)) * float(prng.choice([-1.0, 1.0]))
             _apply_gain_decoy(frames, profile, np.full(3, delta))
@@ -1492,9 +1260,7 @@ def _apply_global_decoys(
 
 @dataclass
 class _Source:
-    frames: (
-        np.ndarray
-    )  # source timeline (num_out + room for dropped frames), decoys applied
+    frames: np.ndarray  # source timeline (num_out + room for dropped frames), decoys applied
     kind: str  # "procedural" | "footage"
     shots: list[tuple[int, Optional[_SceneSpec]]]  # (first frame, scene) of each shot
     decoys: list[_DecoyPlan]  # realised decoys on the source timeline
@@ -1521,9 +1287,7 @@ def _build_source_once(
         and config.footage_fraction > 0
         and float(rng.random()) < config.footage_fraction
     ):
-        footage_path = config.footage_paths[
-            int(rng.integers(0, len(config.footage_paths)))
-        ]
+        footage_path = config.footage_paths[int(rng.integers(0, len(config.footage_paths)))]
         footage = _load_footage_frames(footage_path, config, num_src)
         if footage is None:
             logger.warning("falling back to a procedural source for seed {}", seed)
@@ -1534,55 +1298,34 @@ def _build_source_once(
     if forced is not None:
         types = list(dict.fromkeys(forced))
     else:
-        types = _choose_decoy_types(
-            drng, config, num_out, footage is not None, footage is None or bool(others)
-        )
+        types = _choose_decoy_types(drng, config, num_out, footage is not None, footage is None or bool(others))
 
     if footage is not None:
-        plans, cut = _place_decoys(
-            drng, types, num_out, fps, moving_camera=lambda _shot: False
-        )
+        plans, cut = _place_decoys(drng, types, num_out, fps, moving_camera=lambda _shot: False)
         frames = np.ascontiguousarray(footage[:num_src])
         if cut is not None:
             second_path = others[int(drng.integers(0, len(others)))] if others else ""
-            second_footage = (
-                _load_footage_frames(second_path, config, num_src - cut)
-                if second_path
-                else None
-            )
+            second_footage = _load_footage_frames(second_path, config, num_src - cut) if second_path else None
             if second_footage is None:
                 plans = [p for p in plans if p.type != "scene_cut"]
                 cut = None
             else:
                 frames[cut:] = second_footage
-        shots: list[tuple[int, Optional[_SceneSpec]]] = (
-            [(0, None)] if cut is None else [(0, None), (cut, None)]
-        )
+        shots: list[tuple[int, Optional[_SceneSpec]]] = [(0, None)] if cut is None else [(0, None), (cut, None)]
         realized = plans
     else:
         modes = hints.camera_modes
         if forced is not None and _CAMERA_DECOYS & set(forced):
             modes = _MOVING_CAMERA_MODES
         scene_kwargs = dict(
-            camera_modes=modes,
-            symmetric=hints.symmetric,
+            camera_modes=modes, symmetric=hints.symmetric,
             fast_objects=hints.fast_objects,
         )
         # A forced decoy that cannot be realised on a scene (e.g. a weak pan) retries on a fresh one.
-        scene_parts = (
-            ("scene",) if salt == 0 and attempt == 0 else ("scene", salt, attempt)
-        )
-        spec_a = _sample_scene(
-            _rng(seed, *scene_parts), config.width, config.height, fps, **scene_kwargs
-        )
+        scene_parts = ("scene",) if salt == 0 and attempt == 0 else ("scene", salt, attempt)
+        spec_a = _sample_scene(_rng(seed, *scene_parts), config.width, config.height, fps, **scene_kwargs)
         spec_b = (
-            _sample_scene(
-                _rng(seed, "scene_b", salt, attempt),
-                config.width,
-                config.height,
-                fps,
-                **scene_kwargs,
-            )
+            _sample_scene(_rng(seed, "scene_b", salt, attempt), config.width, config.height, fps, **scene_kwargs)
             if "scene_cut" in types
             else None
         )
@@ -1607,20 +1350,11 @@ def _build_source_once(
             ]
             shot_frames, done = _render_scene(specs[shot], lengths[shot], events)
             parts.append(shot_frames)
-            realized += [
-                _DecoyPlan(kind, a + offsets[shot], b + offsets[shot], shot)
-                for kind, a, b in done
-            ]
+            realized += [_DecoyPlan(kind, a + offsets[shot], b + offsets[shot], shot) for kind, a, b in done]
         frames = np.ascontiguousarray(np.concatenate(parts, axis=0))
         shots = [(0, spec_a)] if cut is None else [(0, spec_a), (cut, spec_b)]
     _apply_global_decoys(frames, realized, seed, fps)
-    return _Source(
-        frames=frames,
-        kind="footage" if footage is not None else "procedural",
-        shots=shots,
-        decoys=realized,
-        cut=cut,
-    )
+    return _Source(frames=frames, kind="footage" if footage is not None else "procedural", shots=shots, decoys=realized, cut=cut)
 
 
 def _build_source(
@@ -1637,14 +1371,7 @@ def _build_source(
     attempts = 6 if forced else 1
     for attempt in range(attempts):
         source = _build_source_once(
-            seed,
-            config,
-            num_src,
-            num_out,
-            attempt,
-            hints=hints or _SceneHints(),
-            forced=forced,
-            salt=salt,
+            seed, config, num_src, num_out, attempt, hints=hints or _SceneHints(), forced=forced, salt=salt
         )
         if not forced or set(dict.fromkeys(forced)) <= {p.type for p in source.decoys}:
             return source
@@ -1672,9 +1399,7 @@ def _source_to_output(drops: Sequence[tuple[int, int]]) -> Callable[[int], int]:
 
 @dataclass
 class _EditOutcome:
-    frames: (
-        np.ndarray
-    )  # replacement frames for the window (0 frames for dropped_frames)
+    frames: np.ndarray  # replacement frames for the window (0 frames for dropped_frames)
     params: dict[str, float | int | str]
     bbox: Optional[list[float]] = None
 
@@ -1699,8 +1424,7 @@ class _EditContext:
 
 
 EditorFn = Callable[
-    [np.random.Generator, np.ndarray, int, int, str, _EditContext],
-    Optional[_EditOutcome],
+    [np.random.Generator, np.ndarray, int, int, str, _EditContext], Optional[_EditOutcome]
 ]
 
 
@@ -1727,10 +1451,7 @@ def _sample_indices(length: int) -> list[int]:
 SUBTLE_TIERS = ("hard", "expert")
 _FROZEN_MIN = {"easy": 5.0, "medium": 5.0, "hard": 3.5, "expert": 2.5}
 _DROPPED_MIN = {"easy": 5.0, "medium": 5.0, "hard": 4.0, "expert": 3.5}
-_DROPPED_RATIO = {
-    "hard": 1.3,
-    "expert": 1.25,
-}  # jump across the cut vs a normal step, at coarse scale
+_DROPPED_RATIO = {"hard": 1.3, "expert": 1.25}  # jump across the cut vs a normal step, at coarse scale
 _SPLICE_MIN = {"easy": 12.0, "medium": 12.0, "hard": 8.0, "expert": 7.0}
 _MIRROR_MIN = {"easy": 8.0, "medium": 8.0, "hard": 6.0, "expert": 4.5}
 _ZOOM_MIN = {"easy": 8.0, "medium": 8.0, "hard": 4.0, "expert": 2.5}
@@ -1738,12 +1459,7 @@ _FLICKER_MIN = {"easy": 8.0, "medium": 8.0, "hard": 5.0, "expert": 3.0}
 _GRADE_MIN_MAD = {"easy": 4.0, "medium": 4.0}
 _GRADE_MIN_SHIFT = {"hard": 2.5, "expert": 1.6}  # mean channel shift, levels
 _REVERSE_ASYM_MIN = {"easy": 5.0, "medium": 5.0, "hard": 3.0, "expert": 2.5}
-_REVERSE_MOTION = {
-    "easy": (5.0, 1e9),
-    "medium": (5.0, 1e9),
-    "hard": (3.5, 10.0),
-    "expert": (3.0, 9.0),
-}
+_REVERSE_MOTION = {"easy": (5.0, 1e9), "medium": (5.0, 1e9), "hard": (3.5, 10.0), "expert": (3.0, 9.0)}
 
 
 def _edit_frozen(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
@@ -1753,9 +1469,7 @@ def _edit_frozen(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     pair = ctx.det(src[[a, b]])
     if _mad(pair[0], pair[1]) < _FROZEN_MIN[difficulty] + ctx.margin():
         return None
-    return _EditOutcome(
-        np.repeat(src[a : a + 1], b - a, axis=0), {"hold_frames": b - a}
-    )
+    return _EditOutcome(np.repeat(src[a : a + 1], b - a, axis=0), {"hold_frames": b - a})
 
 
 def _pool(frames: np.ndarray, factor: int) -> np.ndarray:
@@ -1772,12 +1486,8 @@ def _edit_dropped(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     if a < 1 or b >= len(src):
         return None
     lead = max(a - 3, 0)
-    seen = ctx.det(
-        src[[*range(lead, a), b]]
-    )  # the frames either side of the cut, and a run-up
-    scale = (
-        0.5 if difficulty in SUBTLE_TIERS else 1.0
-    )  # sub-2-frame gaps: the ratio test below carries the weight
+    seen = ctx.det(src[[*range(lead, a), b]])  # the frames either side of the cut, and a run-up
+    scale = 0.5 if difficulty in SUBTLE_TIERS else 1.0  # sub-2-frame gaps: the ratio test below carries the weight
     if _mad(seen[-2], seen[-1]) < _DROPPED_MIN[difficulty] + scale * ctx.margin():
         return None
     if difficulty in SUBTLE_TIERS and len(seen) >= 3:
@@ -1785,19 +1495,9 @@ def _edit_dropped(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
         # and is not perceptible: compare the jump with normal steps at a coarse scale
         # where image difference still grows with displacement.
         pooled = _pool(seen, max(2, seen.shape[2] // 40))
-        normal = float(
-            np.mean(
-                [
-                    np.abs(pooled[i + 1] - pooled[i]).mean()
-                    for i in range(len(pooled) - 2)
-                ]
-            )
-        )
+        normal = float(np.mean([np.abs(pooled[i + 1] - pooled[i]).mean() for i in range(len(pooled) - 2)]))
         jump = float(np.abs(pooled[-1] - pooled[-2]).mean())
-        if (
-            jump < _DROPPED_RATIO[difficulty] * normal
-            or jump - normal < 0.6 + 0.5 * ctx.margin()
-        ):
+        if jump < _DROPPED_RATIO[difficulty] * normal or jump - normal < 0.6 + 0.5 * ctx.margin():
             return None
     empty = np.empty((0,) + src.shape[1:], dtype=np.uint8)
     return _EditOutcome(empty, {"dropped_frames": b - a})
@@ -1812,9 +1512,7 @@ def _edit_reversed(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     motion = _mad(det[0], det[-1])
     low, high = _REVERSE_MOTION[difficulty]
     margin = ctx.margin()
-    if asym < _REVERSE_ASYM_MIN[difficulty] + margin or not (
-        low + margin <= motion <= high
-    ):
+    if asym < _REVERSE_ASYM_MIN[difficulty] + margin or not (low + margin <= motion <= high):
         return None
     return _EditOutcome(np.ascontiguousarray(window[::-1]), {"frames": length})
 
@@ -1844,21 +1542,9 @@ def _hue_matrix(degrees: float) -> np.ndarray:
     c, s = math.cos(rad), math.sin(rad)
     return np.array(
         [
-            [
-                0.213 + c * 0.787 - s * 0.213,
-                0.715 - c * 0.715 - s * 0.715,
-                0.072 - c * 0.072 + s * 0.928,
-            ],
-            [
-                0.213 - c * 0.213 + s * 0.143,
-                0.715 + c * 0.285 + s * 0.140,
-                0.072 - c * 0.072 - s * 0.283,
-            ],
-            [
-                0.213 - c * 0.213 - s * 0.787,
-                0.715 - c * 0.715 + s * 0.715,
-                0.072 + c * 0.928 + s * 0.072,
-            ],
+            [0.213 + c * 0.787 - s * 0.213, 0.715 - c * 0.715 - s * 0.715, 0.072 - c * 0.072 + s * 0.928],
+            [0.213 - c * 0.213 + s * 0.143, 0.715 + c * 0.285 + s * 0.140, 0.072 - c * 0.072 - s * 0.283],
+            [0.213 - c * 0.213 - s * 0.787, 0.715 - c * 0.715 + s * 0.715, 0.072 + c * 0.928 + s * 0.072],
         ],
         dtype=np.float32,
     )
@@ -1867,11 +1553,7 @@ def _hue_matrix(degrees: float) -> np.ndarray:
 def _edit_color_grade(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     spread_range, hue_range = _GRADE_STRENGTH[difficulty]
     # Subtle grades are a pure gain change OR a pure hue rotation: the two would add up.
-    mode = str(
-        rng.choice(
-            ["gain", "hue"] if difficulty in SUBTLE_TIERS else ["gain", "hue", "both"]
-        )
-    )
+    mode = str(rng.choice(["gain", "hue"] if difficulty in SUBTLE_TIERS else ["gain", "hue", "both"]))
     gains = np.ones(3, dtype=np.float32)
     hue = 0.0
     params: dict[str, float | int | str] = {"mode": mode}
@@ -1883,9 +1565,7 @@ def _edit_color_grade(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
         gains[order[1]] = 1.0 - spread * (1.0 - share)
         gains[order[2]] = 1.0 + spread * float(rng.uniform(-0.5, 0.5)) * 0.5
         params.update(
-            gain_r=round(float(gains[0]), 4),
-            gain_g=round(float(gains[1]), 4),
-            gain_b=round(float(gains[2]), 4),
+            gain_r=round(float(gains[0]), 4), gain_g=round(float(gains[1]), 4), gain_b=round(float(gains[2]), 4)
         )
     if mode in ("hue", "both"):
         hue = _uniform(rng, hue_range) * float(rng.choice([-1.0, 1.0]))
@@ -1901,10 +1581,7 @@ def _edit_color_grade(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     sample = window[_sample_indices(len(window))]
     graded_sample, original = ctx.det(grade(sample)), ctx.det(sample)
     if difficulty in SUBTLE_TIERS:
-        shift = np.abs(
-            graded_sample.reshape(-1, 3).mean(axis=0)
-            - original.reshape(-1, 3).mean(axis=0)
-        )
+        shift = np.abs(graded_sample.reshape(-1, 3).mean(axis=0) - original.reshape(-1, 3).mean(axis=0))
         if float(shift.max()) < _GRADE_MIN_SHIFT[difficulty]:
             return None
     elif _mad(graded_sample, original) < _GRADE_MIN_MAD[difficulty] + ctx.margin():
@@ -1939,25 +1616,13 @@ def _edit_mirrored(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     return _EditOutcome(np.ascontiguousarray(window[:, :, ::-1]), {"frames": b - a})
 
 
-_ZOOM_SCALES = {
-    "easy": (1.2, 1.4),
-    "medium": (1.1, 1.2),
-    "hard": (1.03, 1.08),
-    "expert": (1.02, 1.05),
-}
+_ZOOM_SCALES = {"easy": (1.2, 1.4), "medium": (1.1, 1.2), "hard": (1.03, 1.08), "expert": (1.02, 1.05)}
 
 
-def _zoom_frames(
-    frames: np.ndarray, box: tuple[float, float, float, float]
-) -> np.ndarray:
+def _zoom_frames(frames: np.ndarray, box: tuple[float, float, float, float]) -> np.ndarray:
     height, width = frames.shape[1:3]
     return np.stack(
-        [
-            np.asarray(
-                Image.fromarray(frame).resize((width, height), Image.BILINEAR, box=box)
-            )
-            for frame in frames
-        ]
+        [np.asarray(Image.fromarray(frame).resize((width, height), Image.BILINEAR, box=box)) for frame in frames]
     )
 
 
@@ -1971,39 +1636,16 @@ def _edit_zoom(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     box = (x0, y0, x0 + crop_w, y0 + crop_h)
     step = max(1, len(window) // 3)
     original = ctx.det(window[::step])
-    if (
-        _mad(ctx.det(_zoom_frames(window[::step], box)), original)
-        < _ZOOM_MIN[difficulty] + ctx.margin()
-    ):
+    if _mad(ctx.det(_zoom_frames(window[::step], box)), original) < _ZOOM_MIN[difficulty] + ctx.margin():
         return None
     return _EditOutcome(_zoom_frames(window, box), {"scale": round(scale, 4)})
 
 
-_INSERT_SIZE = {
-    "easy": (0.10, 0.15),
-    "medium": (0.06, 0.10),
-    "hard": (0.04, 0.06),
-    "expert": (0.03, 0.05),
-}
-_INSERT_CONTRAST = {
-    "easy": 10.0,
-    "medium": 5.0,
-    "hard": 5.0,
-    "expert": 4.0,
-}  # median painted |diff|
-_INSERT_CORE = {
-    "easy": 0.0,
-    "medium": 0.0,
-    "hard": 11.0,
-    "expert": 9.0,
-}  # 90th percentile painted |diff|
+_INSERT_SIZE = {"easy": (0.10, 0.15), "medium": (0.06, 0.10), "hard": (0.04, 0.06), "expert": (0.03, 0.05)}
+_INSERT_CONTRAST = {"easy": 10.0, "medium": 5.0, "hard": 5.0, "expert": 4.0}  # median painted |diff|
+_INSERT_CORE = {"easy": 0.0, "medium": 0.0, "hard": 11.0, "expert": 9.0}  # 90th percentile painted |diff|
 _INSERT_FOLLOW = {"easy": 0.4, "medium": 0.6, "hard": 1.0, "expert": 1.0}
-_INSERT_SPREAD = {
-    "easy": 22.0,
-    "medium": 14.0,
-    "hard": 13.0,
-    "expert": 11.0,
-}  # colour match tolerance
+_INSERT_SPREAD = {"easy": 22.0, "medium": 14.0, "hard": 13.0, "expert": 11.0}  # colour match tolerance
 
 
 def _global_shifts(window: np.ndarray) -> np.ndarray:
@@ -2031,16 +1673,8 @@ def _global_shifts(window: np.ndarray) -> np.ndarray:
         if peak > 8.0 * float(np.abs(corr).mean()):
             offsets = []
             for axis, size, at in ((1, width, peak_x), (0, height, peak_y)):
-                left = (
-                    corr[peak_y, (at - 1) % size]
-                    if axis == 1
-                    else corr[(at - 1) % size, peak_x]
-                )
-                right = (
-                    corr[peak_y, (at + 1) % size]
-                    if axis == 1
-                    else corr[(at + 1) % size, peak_x]
-                )
+                left = corr[peak_y, (at - 1) % size] if axis == 1 else corr[(at - 1) % size, peak_x]
+                right = corr[peak_y, (at + 1) % size] if axis == 1 else corr[(at + 1) % size, peak_x]
                 denom = left - 2.0 * peak + right
                 frac = 0.5 * (left - right) / denom if abs(denom) > 1e-9 else 0.0
                 signed = at - size if at > size // 2 else at
@@ -2054,10 +1688,7 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     window = src[a:b]
     length = len(window)
     height, width = window.shape[1:3]
-    size = max(
-        8.0 if difficulty in SUBTLE_TIERS else 10.0,
-        _uniform(rng, _INSERT_SIZE[difficulty]) * max(width, height),
-    )
+    size = max(8.0 if difficulty in SUBTLE_TIERS else 10.0, _uniform(rng, _INSERT_SIZE[difficulty]) * max(width, height))
     kind = str(rng.choice(["circle", "rect", "triangle", "ellipse"]))
     hw = size / 2.0
     hh = hw * (float(rng.uniform(0.7, 1.0)) if kind in ("rect", "ellipse") else 1.0)
@@ -2081,9 +1712,7 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     if follow:
         relative = _global_shifts(window)
         if difficulty in SUBTLE_TIERS:
-            relative = relative + rng.uniform(-3.0, 3.0, 2)[None, :] * (
-                np.arange(length)[:, None] / ctx.config.fps
-            )
+            relative = relative + rng.uniform(-3.0, 3.0, 2)[None, :] * (np.arange(length)[:, None] / ctx.config.fps)
         low = np.array([lo_x, lo_y]) - relative.min(axis=0)
         high = np.array([hi_x, hi_y]) - relative.max(axis=0)
         if np.any(high <= low):
@@ -2103,14 +1732,10 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     # Sample the local mean colour under the sprite's start position.
     px0, px1 = int(max(path[0, 0] - left, 0)), int(min(path[0, 0] + right, width))
     py0, py1 = int(max(path[0, 1] - top, 0)), int(min(path[0, 1] + bottom, height))
-    local_mean = (
-        window[:, py0:py1, px0:px1].reshape(-1, 3).mean(axis=0).astype(np.float32)
-    )
+    local_mean = window[:, py0:py1, px0:px1].reshape(-1, 3).mean(axis=0).astype(np.float32)
     # Colour matched to the surroundings, within a tolerance that shrinks with the tier.
     spread = _INSERT_SPREAD[difficulty]
-    color_a = np.clip(local_mean + rng.normal(0.0, spread, 3), 0, 255).astype(
-        np.float32
-    )
+    color_a = np.clip(local_mean + rng.normal(0.0, spread, 3), 0, 255).astype(np.float32)
     color_b = np.clip(color_a + rng.normal(0.0, spread, 3), 0, 255).astype(np.float32)
     stripe_depth = 0.1 if difficulty in SUBTLE_TIERS else 0.2
     freq = float(rng.uniform(0.25, 0.7))
@@ -2119,19 +1744,8 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     def paint(index: int) -> np.ndarray:
         canvas = window[index].astype(np.float32)
         _draw_shape(
-            canvas,
-            (0, 0),
-            (float(path[index, 0]), float(path[index, 1])),
-            kind,
-            hw,
-            hh,
-            0.0,
-            color_a,
-            color_b,
-            freq,
-            phase,
-            feather=feather,
-            stripe_depth=stripe_depth,
+            canvas, (0, 0), (float(path[index, 0]), float(path[index, 1])), kind, hw, hh, 0.0,
+            color_a, color_b, freq, phase, feather=feather, stripe_depth=stripe_depth,
         )
         return np.clip(canvas, 0, 255).astype(np.uint8)
 
@@ -2139,29 +1753,12 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     before = ctx.det(window[indices])
     after = ctx.det(np.stack([paint(i) for i in indices]))
     diff = np.abs(after.astype(np.float32) - before.astype(np.float32)).mean(axis=3)
-    contrast = float(
-        np.mean(
-            [float(np.median(d[d > 0.5])) if (d > 0.5).any() else 0.0 for d in diff]
-        )
-    )
-    core = float(
-        np.mean(
-            [
-                float(np.percentile(d[d > 0.5], 90)) if (d > 0.5).any() else 0.0
-                for d in diff
-            ]
-        )
-    )
+    contrast = float(np.mean([float(np.median(d[d > 0.5])) if (d > 0.5).any() else 0.0 for d in diff]))
+    core = float(np.mean([float(np.percentile(d[d > 0.5], 90)) if (d > 0.5).any() else 0.0 for d in diff]))
     if contrast < _INSERT_CONTRAST[difficulty] or core < _INSERT_CORE[difficulty]:
         return None
     out = np.stack([paint(i) for i in range(length)])
-    boxes = np.concatenate(
-        [
-            path - np.array([left + pad, top + pad]),
-            path + np.array([right + pad, bottom + pad]),
-        ],
-        axis=1,
-    )
+    boxes = np.concatenate([path - np.array([left + pad, top + pad]), path + np.array([right + pad, bottom + pad])], axis=1)
     x0 = max(float(boxes[:, 0].min()), 0.0) / width
     y0 = max(float(boxes[:, 1].min()), 0.0) / height
     x1 = min(float(boxes[:, 2].max()), float(width)) / width
@@ -2171,26 +1768,14 @@ def _edit_inserted(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
         {
             "shape": kind,
             "size_px": round(size, 2),
-            "drift": "follows_scene"
-            if follow
-            else ("static" if np.allclose(path[0], path[-1]) else "linear"),
+            "drift": "follows_scene" if follow else ("static" if np.allclose(path[0], path[-1]) else "linear"),
         },
         bbox=[float(x0), float(y0), float(x1), float(y1)],
     )
 
 
-_BLUR_FRACTION = {
-    "easy": (0.15, 0.25),
-    "medium": (0.10, 0.15),
-    "hard": (0.06, 0.10),
-    "expert": (0.05, 0.08),
-}
-_BLUR_SIGMA = {
-    "easy": (3.0, 6.0),
-    "medium": (2.0, 3.0),
-    "hard": (1.2, 2.0),
-    "expert": (1.0, 1.5),
-}
+_BLUR_FRACTION = {"easy": (0.15, 0.25), "medium": (0.10, 0.15), "hard": (0.06, 0.10), "expert": (0.05, 0.08)}
+_BLUR_SIGMA = {"easy": (3.0, 6.0), "medium": (2.0, 3.0), "hard": (1.2, 2.0), "expert": (1.0, 1.5)}
 _PIXEL_BLOCK = {"easy": (5, 8), "medium": (3, 5), "hard": (2, 3), "expert": (2, 2)}
 # (min energy drop, max after/before ratio, min patch MAD)
 _BLUR_GUARD = {
@@ -2203,20 +1788,14 @@ _BLUR_GUARD = {
 
 def _gradient_energy(patch: np.ndarray) -> float:
     gray = patch.astype(np.float32).mean(axis=2)
-    return float(
-        np.abs(np.diff(gray, axis=1)).mean() + np.abs(np.diff(gray, axis=0)).mean()
-    )
+    return float(np.abs(np.diff(gray, axis=1)).mean() + np.abs(np.diff(gray, axis=0)).mean())
 
 
-def _blur_patch(
-    patch: np.ndarray, pixelate: bool, block: int, sigma: float
-) -> np.ndarray:
+def _blur_patch(patch: np.ndarray, pixelate: bool, block: int, sigma: float) -> np.ndarray:
     image = Image.fromarray(patch)
     if pixelate:
         rect_h, rect_w = patch.shape[:2]
-        small = image.resize(
-            (max(1, rect_w // block), max(1, rect_h // block)), Image.BOX
-        )
+        small = image.resize((max(1, rect_w // block), max(1, rect_h // block)), Image.BOX)
         image = small.resize((rect_w, rect_h), Image.NEAREST)
     else:
         image = image.filter(ImageFilter.GaussianBlur(sigma))
@@ -2231,9 +1810,7 @@ def _edit_blurred(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
     if rect_w >= width or rect_h >= height:
         return None
     mid = len(window) // 2
-    tries = (
-        4 if difficulty in SUBTLE_TIERS else 1
-    )  # small subtle boxes go where there is texture to lose
+    tries = 4 if difficulty in SUBTLE_TIERS else 1  # small subtle boxes go where there is texture to lose
     best: tuple[float, int, int] | None = None
     for _ in range(tries):
         cx = int(rng.integers(0, width - rect_w + 1))
@@ -2255,9 +1832,7 @@ def _edit_blurred(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
         params = {"mode": "gaussian", "sigma": round(sigma, 3)}
 
     mid_frame = window[mid].copy()
-    mid_frame[y0:y1, x0:x1] = _blur_patch(
-        window[mid, y0:y1, x0:x1], pixelate, block, sigma
-    )
+    mid_frame[y0:y1, x0:x1] = _blur_patch(window[mid, y0:y1, x0:x1], pixelate, block, sigma)
     seen_before = ctx.det(window[mid])[y0:y1, x0:x1]
     seen_after = ctx.det(mid_frame)[y0:y1, x0:x1]
     before, after = _gradient_energy(seen_before), _gradient_energy(seen_after)
@@ -2268,12 +1843,8 @@ def _edit_blurred(rng, src, a, b, difficulty, ctx):  # noqa: ANN001
         return None
     out = window.copy()
     for index in range(len(window)):
-        out[index, y0:y1, x0:x1] = _blur_patch(
-            window[index, y0:y1, x0:x1], pixelate, block, sigma
-        )
-    return _EditOutcome(
-        out, params, bbox=[x0 / width, y0 / height, x1 / width, y1 / height]
-    )
+        out[index, y0:y1, x0:x1] = _blur_patch(window[index, y0:y1, x0:x1], pixelate, block, sigma)
+    return _EditOutcome(out, params, bbox=[x0 / width, y0 / height, x1 / width, y1 / height])
 
 
 EDITORS: dict[str, EditorFn] = {
@@ -2294,20 +1865,10 @@ EDITORS: dict[str, EditorFn] = {
 _LENGTH_SECONDS: dict[str, dict[str, tuple[float, float]]] = {
     "frozen_frames": {"easy": (0.6, 1.0), "medium": (0.3, 0.6)},
     "dropped_frames": {"easy": (0.4, 0.8), "medium": (0.2, 0.4)},
-    "reversed_segment": {
-        "easy": (0.8, 1.2),
-        "medium": (0.5, 0.8),
-        "hard": (0.3, 0.5),
-        "expert": (0.2, 0.35),
-    },
+    "reversed_segment": {"easy": (0.8, 1.2), "medium": (0.5, 0.8), "hard": (0.3, 0.5), "expert": (0.2, 0.35)},
     "spliced_footage": {"easy": (0.5, 0.8), "medium": (0.27, 0.5)},
     "color_grade_jump": {d: (0.8, 2.5) for d in DIFFICULTIES},
-    "mirrored_segment": {
-        "easy": (0.8, 1.2),
-        "medium": (0.4, 0.8),
-        "hard": (0.3, 0.6),
-        "expert": (0.3, 0.5),
-    },
+    "mirrored_segment": {"easy": (0.8, 1.2), "medium": (0.4, 0.8), "hard": (0.3, 0.6), "expert": (0.3, 0.5)},
     "zoom_jump": {d: (0.8, 2.0) for d in DIFFICULTIES},
     "inserted_object": {d: (1.0, 3.0) for d in DIFFICULTIES},
     "blurred_region": {d: (1.0, 3.0) for d in DIFFICULTIES},
@@ -2341,10 +1902,7 @@ def _sample_length(
 def _max_dropped_frames(difficulty: str, fps: float) -> int:
     if ("dropped_frames", difficulty) in _FRAME_WINDOWS:
         return _FRAME_WINDOWS[("dropped_frames", difficulty)][1]
-    return max(
-        _MIN_FRAMES["dropped_frames"],
-        int(math.ceil(_LENGTH_SECONDS["dropped_frames"][difficulty][1] * fps)),
-    )
+    return max(_MIN_FRAMES["dropped_frames"], int(math.ceil(_LENGTH_SECONDS["dropped_frames"][difficulty][1] * fps)))
 
 
 # ---------------------------------------------------------------------------
@@ -2360,27 +1918,19 @@ class _PlannedEdit:
 
 
 def _plan_edits(
-    rng: np.random.Generator,
-    names: Sequence[str],
-    num_out: int,
-    difficulty: str,
-    fps: float,
+    rng: np.random.Generator, names: Sequence[str], num_out: int, difficulty: str, fps: float
 ) -> list[_PlannedEdit] | None:
     """Place non-overlapping windows on the source timeline, or None if they cannot fit."""
     count = len(names)
     gap = int(math.ceil(MIN_ISSUE_GAP_SECONDS * fps))
     margin = int(math.ceil(MIN_END_MARGIN_SECONDS * fps))
     for shrink in (False, True):
-        lengths = [
-            _sample_length(name, rng, difficulty, fps, shrink=shrink) for name in names
-        ]
+        lengths = [_sample_length(name, rng, difficulty, fps, shrink=shrink) for name in names]
         if count == 1:
             lengths = [min(lengths[0], num_out - 2 * margin)]
         # Dropped frames extend the source by exactly their length, so they do not
         # consume output time.
-        kept = sum(
-            n for name, n in zip(names, lengths) if name not in POINT_EVENT_ISSUE_TYPES
-        )
+        kept = sum(n for name, n in zip(names, lengths) if name not in POINT_EVENT_ISSUE_TYPES)
         slack = num_out - 2 * margin - kept - (count - 1) * gap
         if slack >= 0 and min(lengths) >= 1:
             break
@@ -2393,18 +1943,13 @@ def _plan_edits(
         start = margin + int(cuts[index]) + sum(lengths[:index]) + index * gap
         plan.append(_PlannedEdit(name, start, length))
         cursor = start + length
-    assert (
-        cursor
-        <= num_out
-        + sum(n for name, n in zip(names, lengths) if name in POINT_EVENT_ISSUE_TYPES)
-        - margin
-    )
+    assert cursor <= num_out + sum(
+        n for name, n in zip(names, lengths) if name in POINT_EVENT_ISSUE_TYPES
+    ) - margin
     return plan
 
 
-def _edit_clear(
-    decoys: Sequence[_DecoyPlan], name: str, start: int, length: int, fps: float
-) -> bool:
+def _edit_clear(decoys: Sequence[_DecoyPlan], name: str, start: int, length: int, fps: float) -> bool:
     """True if an edit window keeps its distance from every decoy that could make it ambiguous.
 
     A scene cut must not fall inside an edit window nor within 0.5 s of it; other decoys keep the
@@ -2424,18 +1969,10 @@ def _edit_clear(
 
 
 def _make_donor(
-    seed: int,
-    config: SynthesisConfig,
-    shots: Sequence[tuple[int, Optional[_SceneSpec]]] = (),
+    seed: int, config: SynthesisConfig, shots: Sequence[tuple[int, Optional[_SceneSpec]]] = ()
 ) -> Callable[..., np.ndarray]:
-    def donor(
-        rng: np.random.Generator, length: int, position: int = 0, similar: bool = False
-    ) -> np.ndarray:
-        if (
-            config.footage_paths
-            and len(config.footage_paths) > 1
-            and rng.random() < config.footage_fraction
-        ):
+    def donor(rng: np.random.Generator, length: int, position: int = 0, similar: bool = False) -> np.ndarray:
+        if config.footage_paths and len(config.footage_paths) > 1 and rng.random() < config.footage_fraction:
             path = config.footage_paths[int(rng.integers(0, len(config.footage_paths)))]
             frames = _load_footage_frames(path, config, length)
             if frames is not None:
@@ -2449,22 +1986,16 @@ def _make_donor(
                 if start <= position and spec is not None:
                     base = spec
             if base is not None:
-                spec = _sample_scene(
-                    child, config.width, config.height, config.fps, like=base
-                )
+                spec = _sample_scene(child, config.width, config.height, config.fps, like=base)
                 return _render_scene(spec, length)[0]
-        return render_procedural_scene(
-            child, length, config.width, config.height, config.fps
-        )
+        return render_procedural_scene(child, length, config.width, config.height, config.fps)
 
     return donor
 
 
 def _sample_difficulty(rng: np.random.Generator, config: SynthesisConfig) -> str:
     names = [name for name, weight in config.difficulty_weights if weight > 0]
-    weights = np.array(
-        [weight for _, weight in config.difficulty_weights if weight > 0], dtype=float
-    )
+    weights = np.array([weight for _, weight in config.difficulty_weights if weight > 0], dtype=float)
     return str(names[int(rng.choice(len(names), p=weights / weights.sum()))])
 
 
@@ -2511,15 +2042,10 @@ def _assemble(
         )
         srng = _rng(seed, "slide", attempt, index)
         alternatives = [
-            s
-            for s in range(low, high + 1)
-            if s != edit.start and _edit_clear(decoys, edit.name, s, edit.length, fps)
+            s for s in range(low, high + 1) if s != edit.start and _edit_clear(decoys, edit.name, s, edit.length, fps)
         ]
         if len(alternatives) > _SLIDE_TRIES:
-            alternatives = [
-                alternatives[int(i)]
-                for i in srng.choice(len(alternatives), _SLIDE_TRIES, replace=False)
-            ]
+            alternatives = [alternatives[int(i)] for i in srng.choice(len(alternatives), _SLIDE_TRIES, replace=False)]
         outcome: _EditOutcome | None = None
         start = edit.start
         tries = 0
@@ -2527,9 +2053,7 @@ def _assemble(
             for retry in range(_EDIT_RETRIES):
                 tries += 1
                 erng = _rng(seed, "edit", attempt, index, candidate, retry)
-                outcome = EDITORS[edit.name](
-                    erng, src, candidate, candidate + edit.length, difficulty, ctx
-                )
+                outcome = EDITORS[edit.name](erng, src, candidate, candidate + edit.length, difficulty, ctx)
                 if outcome is not None:
                     break
             if outcome is not None:
@@ -2540,9 +2064,7 @@ def _assemble(
             _bump(f"expert_evals:{edit.name}")
             _bump(f"expert_first_fail:{edit.name}", int(tries > 1))
             _bump("expert_resampled", int(tries > 1))  # first draw failed its guard
-            _bump(
-                "expert_edit_failed", int(outcome is None)
-            )  # every draw and position failed
+            _bump("expert_edit_failed", int(outcome is None))  # every draw and position failed
             _bump("expert_accepted", int(outcome is not None))
             _bump("expert_accepted_resampled", int(outcome is not None and tries > 1))
         if outcome is None:
@@ -2590,11 +2112,7 @@ def _decoy_labels(
             continue  # swallowed by a dropped-frames window
         if start >= num_out:
             continue
-        labels.append(
-            DecoyLabel(
-                type=plan.type, start_time=start / fps, end_time=min(end, num_out) / fps
-            )
-        )  # type: ignore[arg-type]
+        labels.append(DecoyLabel(type=plan.type, start_time=start / fps, end_time=min(end, num_out) / fps))  # type: ignore[arg-type]
     return labels
 
 
@@ -2627,9 +2145,7 @@ def generate_clip(
 
     rng = _rng(seed, "plan")
     fps = config.fps
-    num_out = int(
-        round(float(rng.uniform(config.min_duration, config.max_duration)) * fps)
-    )
+    num_out = int(round(float(rng.uniform(config.min_duration, config.max_duration)) * fps))
     clip_difficulty = difficulty or _sample_difficulty(rng, config)
     clean = issue_types is None and float(rng.random()) < config.clean_fraction
     pool = list(issue_types) if issue_types is not None else list(config.issue_types)
@@ -2656,19 +2172,11 @@ def generate_clip(
             nrng = _rng(seed, "names")
             count = _sample_issue_count(nrng, clip_difficulty, len(pool))
             names = [pool[i] for i in nrng.choice(len(pool), size=count, replace=False)]
-            while (
-                len(names) > 1
-                and _plan_edits(
-                    _rng(seed, "feasible"), names, num_out, clip_difficulty, fps
-                )
-                is None
-            ):
+            while len(names) > 1 and _plan_edits(_rng(seed, "feasible"), names, num_out, clip_difficulty, fps) is None:
                 names = names[:-1]  # no room for all of them: keep the first that fit
             # Last resort, after every scene round failed: drop the trailing type.
             name_sets = [names[:k] for k in range(len(names), 0, -1)]
-    share = {"hard": 0.5, "expert": 0.8}.get(
-        clip_difficulty, 0.0
-    )  # near-symmetric mirror scenes
+    share = {"hard": 0.5, "expert": 0.8}.get(clip_difficulty, 0.0)  # near-symmetric mirror scenes
     symmetric = bool(
         name_sets and "mirrored_segment" in name_sets[0] and float(rng.random()) < share
     )
@@ -2680,52 +2188,27 @@ def generate_clip(
         for round_index in range(rounds):
             salt = set_index * _SOURCE_ROUNDS + round_index
             source = _build_source(
-                seed,
-                config_for_source,
-                num_out + max_extra,
-                num_out,
-                hints=hints,
-                forced=forced,
-                salt=salt,
+                seed, config_for_source, num_out + max_extra, num_out, hints=hints, forced=forced, salt=salt
             )
             if clean:
                 break
-            ctx = _EditContext(
-                config=config, donor=_make_donor(seed, config, source.shots), deg=deg
-            )
+            ctx = _EditContext(config=config, donor=_make_donor(seed, config, source.shots), deg=deg)
             for attempt in range(_PLAN_ATTEMPTS):
                 arng = _rng(seed, "attempt", salt, attempt)
-                names = (
-                    [pool[i] for i in arng.permutation(len(pool))]
-                    if issue_types is not None
-                    else list(current)
-                )
-                plan = _plan_clear_of_decoys(
-                    arng, names, num_out, clip_difficulty, fps, source.decoys
-                )
+                names = [pool[i] for i in arng.permutation(len(pool))] if issue_types is not None else list(current)
+                plan = _plan_clear_of_decoys(arng, names, num_out, clip_difficulty, fps, source.decoys)
                 if plan is None and issue_types is None:
                     # Cut clearance left no room: keep the first that fit.
                     while plan is None and len(names) > 1:
                         names = names[:-1]
-                        plan = _plan_clear_of_decoys(
-                            arng, names, num_out, clip_difficulty, fps, source.decoys
-                        )
+                        plan = _plan_clear_of_decoys(arng, names, num_out, clip_difficulty, fps, source.decoys)
                 if plan is None:
                     continue
-                dropped = sum(
-                    e.length for e in plan if e.name in POINT_EVENT_ISSUE_TYPES
-                )
+                dropped = sum(e.length for e in plan if e.name in POINT_EVENT_ISSUE_TYPES)
                 if dropped > max_extra or len(source.frames) < num_out + dropped:
                     continue
                 assembled = _assemble(
-                    source.frames,
-                    plan,
-                    clip_difficulty,
-                    seed,
-                    salt * 100 + attempt,
-                    ctx,
-                    source.decoys,
-                    num_out,
+                    source.frames, plan, clip_difficulty, seed, salt * 100 + attempt, ctx, source.decoys, num_out
                 )
                 if assembled is None:
                     continue
@@ -2749,9 +2232,7 @@ def generate_clip(
                 f"could not place a detectable {list(issue_types)} edit for seed {seed}"
             )
         _bump("plan_fallback")
-        logger.warning(
-            "seed {}: no detectable edit plan found, emitting a clean clip", seed
-        )
+        logger.warning("seed {}: no detectable edit plan found, emitting a clean clip", seed)
 
     frames = np.ascontiguousarray(source.frames[:num_out])
     if len(frames) != num_out:
@@ -2792,9 +2273,5 @@ def collect_footage(directory: str | Path) -> tuple[str, ...]:
     suffixes = {".mp4", ".mov", ".mkv", ".webm"}
     root = Path(directory)
     return tuple(
-        sorted(
-            str(path)
-            for path in root.rglob("*")
-            if path.is_file() and path.suffix.lower() in suffixes
-        )
+        sorted(str(path) for path in root.rglob("*") if path.is_file() and path.suffix.lower() in suffixes)
     )

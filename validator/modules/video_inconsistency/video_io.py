@@ -43,15 +43,9 @@ def _tail(data: bytes) -> str:
     return data.decode("utf-8", errors="replace")[-_STDERR_TAIL_CHARS:].strip()
 
 
-def encode_video(
-    frames: np.ndarray, path: str | Path, fps: float, *, crf: int = 18
-) -> Path:
+def encode_video(frames: np.ndarray, path: str | Path, fps: float, *, crf: int = 18) -> Path:
     """Encode ``(T, H, W, 3)`` uint8 RGB frames to an H.264/yuv420p mp4 at quality ``crf``."""
-    if (
-        not isinstance(crf, (int, np.integer))
-        or isinstance(crf, bool)
-        or not 0 <= crf <= 51
-    ):
+    if not isinstance(crf, (int, np.integer)) or isinstance(crf, bool) or not 0 <= crf <= 51:
         raise ValueError("crf must be an integer in [0, 51]")
     if frames.ndim != 4 or frames.shape[3] != 3 or frames.dtype != np.uint8:
         raise ValueError("frames must be a (T, H, W, 3) uint8 array")
@@ -69,52 +63,31 @@ def encode_video(
         _ffmpeg_exe(),
         "-y",
         "-hide_banner",
-        "-loglevel",
-        "error",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "rgb24",
-        "-s",
-        f"{width}x{height}",
-        "-r",
-        repr(float(fps)),
-        "-i",
-        "-",
+        "-loglevel", "error",
+        "-f", "rawvideo",
+        "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}",
+        "-r", repr(float(fps)),
+        "-i", "-",
         "-an",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-crf",
-        str(int(crf)),
-        "-preset",
-        "medium",
-        "-g",
-        "30",
-        "-keyint_min",
-        "30",
-        "-sc_threshold",
-        "0",
-        "-x264-params",
-        f"scenecut=0:threads={_X264_THREADS}",
-        "-map_metadata",
-        "-1",
-        "-fflags",
-        "+bitexact",
-        "-flags:v",
-        "+bitexact",
-        "-movflags",
-        "+faststart",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-crf", str(int(crf)),
+        "-preset", "medium",
+        "-g", "30",
+        "-keyint_min", "30",
+        "-sc_threshold", "0",
+        "-x264-params", f"scenecut=0:threads={_X264_THREADS}",
+        "-map_metadata", "-1",
+        "-fflags", "+bitexact",
+        "-flags:v", "+bitexact",
+        "-movflags", "+faststart",
         str(output),
     ]
     contiguous = np.ascontiguousarray(frames)
     with tempfile.TemporaryFile() as stderr_file:
         process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=stderr_file,
+            command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=stderr_file
         )
         assert process.stdin is not None
         try:
@@ -145,9 +118,7 @@ def probe_video(path: str | Path) -> VideoInfo:
     if not source.is_file():
         raise ValueError(f"video file not found: {source}")
     width, height, fps = _probe_stream(source)
-    return VideoInfo(
-        fps=fps, num_frames=_count_frames(source), width=width, height=height
-    )
+    return VideoInfo(fps=fps, num_frames=_count_frames(source), width=width, height=height)
 
 
 def _probe_stream(source: Path) -> tuple[int, int, float]:
@@ -159,8 +130,7 @@ def _probe_stream(source: Path) -> tuple[int, int, float]:
     )
     text = result.stderr.decode("utf-8", errors="replace")
     video_line = next(
-        (line for line in text.splitlines() if "Video:" in line and "Stream #" in line),
-        None,
+        (line for line in text.splitlines() if "Video:" in line and "Stream #" in line), None
     )
     if video_line is None:
         raise ValueError(f"no decodable video stream in {source}")
@@ -181,18 +151,8 @@ def _probe_stream(source: Path) -> tuple[int, int, float]:
 def _count_frames(source: Path) -> int:
     result = subprocess.run(
         [
-            _ffmpeg_exe(),
-            "-hide_banner",
-            "-nostdin",
-            "-i",
-            str(source),
-            "-map",
-            "0:v:0",
-            "-fps_mode",
-            "passthrough",
-            "-f",
-            "null",
-            "-",
+            _ffmpeg_exe(), "-hide_banner", "-nostdin", "-i", str(source),
+            "-map", "0:v:0", "-fps_mode", "passthrough", "-f", "null", "-",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -216,22 +176,11 @@ def decode_video(path: str | Path, *, max_frames: int | None = None) -> np.ndarr
     frame_bytes = width * height * 3
 
     command = [
-        _ffmpeg_exe(),
-        "-hide_banner",
-        "-nostdin",
-        "-loglevel",
-        "error",
-        "-i",
-        str(source),
-        "-map",
-        "0:v:0",
-        "-an",
-        "-fps_mode",
-        "passthrough",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "rgb24",
+        _ffmpeg_exe(), "-hide_banner", "-nostdin", "-loglevel", "error",
+        "-i", str(source),
+        "-map", "0:v:0", "-an",
+        "-fps_mode", "passthrough",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
     ]
     if max_frames is not None:
         command += ["-frames:v", str(max_frames)]
@@ -240,10 +189,7 @@ def decode_video(path: str | Path, *, max_frames: int | None = None) -> np.ndarr
     chunks: list[bytes] = []
     with tempfile.TemporaryFile() as stderr_file:
         process = subprocess.Popen(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=stderr_file,
+            command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=stderr_file
         )
         assert process.stdout is not None
         try:

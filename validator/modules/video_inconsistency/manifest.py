@@ -116,9 +116,7 @@ class ClipSpec(BaseModel, frozen=True):
     height: int = Field(gt=0)
     difficulty: Difficulty = "medium"
     source: str = "procedural"  # "procedural" | "footage" — telemetry only
-    crf: int | None = Field(
-        default=None, ge=0, le=51
-    )  # encode quality — telemetry only
+    crf: int | None = Field(default=None, ge=0, le=51)  # encode quality — telemetry only
     issues: list[IssueLabel] = Field(default_factory=list)
     decoys: list[DecoyLabel] = Field(default_factory=list)
 
