@@ -22,7 +22,7 @@ python3 full_automation.py
 `full_automation.py` does the following:
 
 1. Fetches the task.
-2. Downloads the training dataset. If you cannot access the dataset, it generates 3000 clips locally with the same generator instead.
+2. Downloads the public training dataset. If the download fails, it generates 3000 clips locally with the same generator instead.
 3. Trains the baseline and calibrates its thresholds against the validator's scorer.
 4. Packages the submission and smoke-tests it in a clean subprocess.
 5. Uploads it to a **private** Hugging Face model repo, `<HF_USERNAME>/video-inconsistency-task-<TASK_ID>`.
@@ -177,7 +177,7 @@ Rules: `type` must be one of the ten names; times are finite numbers in seconds 
 
 ## Dataset
 
-A ready-made training set is published as a Hugging Face **dataset repo**, `random-sequence/flock-video-inconsistency` (private: ask the task organisers for access, then log in with `huggingface-cli login` or set `HF_TOKEN`). It was produced by the validator's own synthesiser (`build_hf_dataset.py`), with labels for both issues and decoys, and comes in the Hugging Face `videofolder` layout:
+A ready-made training set is published as a Hugging Face **dataset repo**, `random-sequence/flock-video-inconsistency` (public; no login needed, <https://huggingface.co/datasets/random-sequence/flock-video-inconsistency>). It was produced by the validator's own synthesiser (`build_hf_dataset.py`), with labels for both issues and decoys, and comes in the Hugging Face `videofolder` layout:
 
 ```
 README.md                dataset card (issue types, decoys, tiers, counts, scoring)

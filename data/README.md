@@ -11,9 +11,9 @@ The official training dataset is a Hugging Face dataset repo:
 random-sequence/flock-video-inconsistency
 ```
 
-It is private for now: ask the task organisers for access. `full_automation.py` downloads it to
-`data/random-sequence__flock-video-inconsistency/`. If you cannot access it, the script generates
-clips locally with the same synthesiser instead.
+It is public: <https://huggingface.co/datasets/random-sequence/flock-video-inconsistency>.
+`full_automation.py` downloads it to `data/random-sequence__flock-video-inconsistency/`. If the
+download fails (for example, when offline), the script generates clips locally with the same synthesiser instead.
 
 | Split | Clips | Clean | Size |
 |-------|-------|-------|------|
