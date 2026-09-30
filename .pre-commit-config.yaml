@@ -1,3 +1,5 @@
+# Vendored validator code is kept byte-identical to FLock-validator (validator/VENDORED.md).
+exclude: ^validator/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
