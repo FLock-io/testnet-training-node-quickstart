@@ -1,9 +1,10 @@
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
 from loguru import logger
 from torch.utils.data import Dataset
+
 from utils.tool_utils import function_formatter
 
 
@@ -18,10 +19,10 @@ class SFTDataset(Dataset):
         self.observation_format = template["observation_format"]
 
         self.max_seq_length = max_seq_length
-        logger.info("Loading data: {}".format(file))
+        logger.info(f"Loading data: {file}")
         with open(file, "r", encoding="utf8") as f:
             data_list = f.readlines()
-        logger.info("There are {} data in dataset".format(len(data_list)))
+        logger.info(f"There are {len(data_list)} data in dataset")
         self.data_list = data_list
 
     def __len__(self):
@@ -93,13 +94,13 @@ class SFTDataset(Dataset):
         return inputs
 
 
-class SFTDataCollator(object):
+class SFTDataCollator:
     def __init__(self, tokenizer, max_seq_length):
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.pad_token_id = tokenizer.pad_token_id
 
-    def __call__(self, batch: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def __call__(self, batch: list[dict[str, Any]]) -> dict[str, Any]:
         # Find the maximum length in the batch
         lengths = [len(x["input_ids"]) for x in batch if x["input_ids"] is not None]
         # Take the maximum length in the batch, if it exceeds max_seq_length, take max_seq_length
