@@ -3,8 +3,8 @@ import os
 
 import requests
 import yaml
-from loguru import logger
 from huggingface_hub import HfApi
+from loguru import logger
 
 from demo import LoraTrainingArguments, train_lora
 from utils.constants import model2base_model, model2size
@@ -36,8 +36,7 @@ if __name__ == "__main__":
     # download in chunks
     response = requests.get(data_url, stream=True)
     with open("data/demo_data.jsonl", "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+        f.writelines(response.iter_content(chunk_size=8192))
 
     # train all feasible models and merge
     for model_id in all_training_args.keys():
