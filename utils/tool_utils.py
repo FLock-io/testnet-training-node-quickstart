@@ -1,5 +1,5 @@
-from typing import Dict, Any, List, Tuple
 import json
+from typing import Any
 
 DEFAULT_TOOL_PROMPT = (
     "You have access to the following tools:\n{tool_text}"
@@ -14,7 +14,7 @@ DEFAULT_TOOL_PROMPT = (
 DEFAULT_FUNCTION_SLOTS = "Action: {name}\nAction Input: {arguments}\n"
 
 
-def tool_formater(tools: List[Dict[str, Any]]) -> str:
+def tool_formater(tools: list[dict[str, Any]]) -> str:
     tool_text = ""
     tool_names = []
     for tool in tools:
@@ -52,7 +52,7 @@ def tool_formater(tools: List[Dict[str, Any]]) -> str:
 
 
 def function_formatter(tool_calls, function_slots=DEFAULT_FUNCTION_SLOTS) -> str:
-    functions: List[Tuple[str, str]] = []
+    functions: list[tuple[str, str]] = []
     if not isinstance(tool_calls, list):
         tool_calls = [tool_calls]  # parrallel function calls
 
